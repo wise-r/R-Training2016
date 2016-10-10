@@ -1,0 +1,536 @@
+---
+title: "基础数据结构"
+author: "Milton Deng"
+documentclass: ctexart
+output:
+  html_document:
+    toc: yes
+  pdf_document:
+    fig_caption: yes
+    latex_engine: xelatex
+    number_sections: yes
+    template: /Library/Frameworks/R.framework/Versions/3.2/Resources/library/rticles/rmarkdown/templates/ctex/resources/default.latex
+    toc: yes
+classoption: hyperref,
+---
+
+> Everything that exists is an object. Everything that happens is a function. -- John Chambers
+
+当我们面对一堆堆的数据时，最重要的是时刻清楚数据当前的结构是怎样的，而本章主要介绍R语言中的`Vector, Matrix, Array, List, Data Frame`等5种基础的数据结构。
+
+# 数据类型
+
+## 常用数据类型（Type）
+
+在介绍R语言的基础数据结构之前，我们需要先了解数据的类型（Type）。R语言中常用的数据类型包括
+
+1. Logical，逻辑型：，仅有`TRUE`和`FALSE`两个取值，用于逻辑判断；
+2. Integer，整数型：所有整数；
+3. Numerical/Double，数值型：包含了小数；
+4. Character，字符型：表示文本内容。
+
+我们经常通过`typeof(), is.integer()`等几个函数来了解变量的类型。
+
+```{r}
+x <- 2.5
+typeof(x) 
+is.numeric(x)
+is.double(x)
+is.character(x)
+is.logical(x)
+```
+
+注意如果我们需要得到一个integer变量，需要在这个整数后面加上“L”后缀，否则会识别为double。
+
+```{r}
+x <- 3L
+is.integer(x)
+is.double(x)
+
+x <- 3
+is.integer(x)
+is.double(x)
+```
+
+有时明确区分integer和double是有必要的，尤其在大规模运算中可以减小的存储空间并提升运行速度。
+
+除此之外，我们还会经常遇到的NULL（空值）和NA（缺失值），我们会在后面具体应用时讨论。
+
+## 类型强制转换（Coercion）
+
+思考下面程序将会得到什么结果：
+
+```{r}
+FALSE + 1 + TRUE
+```
+
+实际上这里FASLE和TRUE被自动转换为了0和1。不同的数据类型之间转换总体上符合下面的这个顺序：
+`NULL < logical < integer < numeric < character`
+
+当然你也可以自己实现类型间的强制转换。这些函数通常是以`as.`开头的，比如下面的程序：
+
+```{r}
+x <- 1L
+as.logical(x)
+as.numeric(x)
+as.character(x)
+```
+
+# 基础数据结构
+
+## Vector 向量
+
+### 创建向量
+
+Vector（向量）在R语言中具有核心地位。建立一个向量通常用`c()`函数即可（字母c表示combine），并且可以用`length()`查看它的长度:
+
+```{r}
+vec <- c(2, 3)
+vec
+length(vec)
+```
+
+也有很多方法帮助我们快速生成有规律的数字序列，比较常用的是`:`和`seq()`和`rep()`：
+
+```{r}
+1:5
+seq(from = 0, to = 10, by = 2)
+seq(from = 1, length.out = 5)
+
+rep(1:3, each =2)
+rep(1:3, times = 2)
+```
+
+同时我们也可以通过`names()`对向量的元素命名：
+
+```{r}
+vec <- 1:5
+names(vec) <- LETTERS[1:5] #LETTERS是R内置的一个向量
+vec
+```
+
+Vector要求其内的元素是同质的（Homogeneous)，即所有元素必须是同一个数据类型，但并不必须是数值型（Numeric）的。如果向量中的元素类型不一致将会强制转换，应该注意和避免不恰当的强制转换。
+
+```{r}
+x <- c("a", "c", "d")
+typeof(c("a", 3))
+```
+
+最后R语言中不存在标量（Scalar）。单个数字在R语言中视为长度为1的向量。
+
+### 向量拼接
+
+我们也可以对Vector做拼接，将几个向量串接为一个向量：
+
+```{r}
+vec1 <- 1:5
+vec2 <- c(-3, vec1, c(-3, -4))
+vec2
+```
+
+Vector中的拼接是没有层级结构的，也就是它总是一个一维的向量，这一点和后面介绍的List存在区别。
+
+### 向量运算
+
+数值向量间可以进行`+, -, *, /`等各类数学运算，但是这些运算和数学运算的定义并不完全一致。应该注意这些运算是“点对点”（element-wise）的运算，这一点和Matlab很相似。
+
+```{r}
+1:3 + 2:4
+1:3 - 2:4
+1:3 * 2:4
+1:3 / 2:4
+(1:3)^2
+```
+
+另外应该非常注意的是，当参与计算的向量长度不等时，R将会自动循环长度较短的向量，再进行运算。这个过程是没有提示的。
+
+```{r}
+1 + 2:4 # equal to c(1+2, 1+3, 1+4)
+1:2 + 2:5 # equal to c(1+2, 2+3, 1+4, 2:5)
+```
+
+
+------------------------------------------ 分割线 ------------------------------------------
+
+
+### 向量元素访问
+
+有很多种方法可以帮助我们选取一个向量中的特定元素。最简单的方法是通过下标选取。
+
+```{r}
+vec <- c(4, 5, 3, 2, 7) # 创建一个包含五个元素的向量。
+
+vec[2] # 选取向量的第二个元素。
+vec[3:4] # 选取向量的3至4个元素。
+vec[c(1, 3, 4)] # 选取向量的第1，3，4个元素。c()用来创建新的向量。
+vec[-2] # 去掉向量的第二个元素。
+```
+
+另一种方式是通过逻辑向量进行筛选：
+
+```{r}
+vec <- c(4, 5, 3, 2, 7) # 创建一个包含五个元素的向量。
+
+vec[c(TRUE, FALSE, TRUE, TRUE, FALSE)] # 对向量的每一个元素标记一个逻辑值TRUE或者FALSE。真代表显示，假代表不显示。
+vec[vec > 4] # 选择向量中大于4的数。vec > 4 表达式会返回一个逻辑值向量。
+```
+
+如果Vector有names的话，也可以通过names去索引：
+
+```{r}
+vec <- c(4, 5, 3, 2, 7)
+
+names(vec) <- LETTERS[1:5] # LETTERS是R内置的一个向量，表示26个大写字母，同样还有letters。
+vec[c("B", "D")]
+```
+
+### 其他常用函数
+
+`unique(), table()`
+
+```{r}
+# 创建一个包含数只股票名称的向量，假设该向量为中金公司7月份增持的股票，每一条记录代表一次增持。
+stock_name <- sample(c("中国银行","交通银行","中国平安","比亚迪"), 100, replace = TRUE)
+
+# 利用unique函数查看向量中所有出现的股票名称。
+unique(stock_name)
+
+# 利用table函数查看每条记录出现的次数。
+table(stock_name)
+```
+
+`rev(), order(), rank()`
+
+```{r}
+vec <- c(1, 3, 4, 2, 1, 2)
+
+rev(vec) # 把向量逆序排列 
+
+# 把向量按照从大到小的顺序排列。
+# 返回的是原向量按从小到大的顺序应该出现的位置。
+order(vec) 
+order(c("a","d","c","b"))
+
+# 把向量按照从大到小的顺序排列。
+rank(vec,ties.method = "average")
+rank(vec,ties.method = "first")
+
+?rank
+# ties.method	a character string specifying how ties are treated, see ‘Details’; can be abbreviated.
+
+```
+
+`%in%`
+
+```{r}
+vec <- c(1, 3, 4, 2, 1, 2)
+
+# 检查某个元素是否在向量中出现。返回逻辑值。
+c(2, 1, 9) %in% vec
+```
+
+### Factor
+
+Factor是一类比较特殊的向量。数据一般可以分为名义型、有序型或连续型变量。比如产品质量等级 A、B、C、D，学生性别“男”“女”。这类数据很常见，而Factor提供了一些列适当的处理方法。
+
+```{r}
+# 我的理解是factor是在创建向量的过程中，同时规定向量的取值范围。
+# 以产品质量为例子，加入产品分为好，坏，中三类。
+product_quality <- factor(x = c("好","坏","坏"),levels = c("坏","中","好"))
+product_quality
+
+typeof(product_quality) # Factor背后实际上是一组数字
+
+product_quality[4] <- "中" # 赋予新值
+product_quality
+
+product_quality[5] <- "搓" # 不可以赋予不在levels内的值
+product_quality
+
+c(factor("a"), factor("b"))  #Factor之间不可以拼接
+
+# 例子，假设你有一个债券评级向量，里面包含100只债券的评级。
+bond_rate <- sample(c("A","A-","A+","AAA","B-","AA-"), 100, replace = TRUE)
+table(bond_rate)
+
+# 重新排列bond_rate
+bond_rate[order(bond_rate,decreasing = TRUE)]
+bond_tate <- bond_rate[order(bond_rate,decreasing = TRUE)]
+table(bond_rate)
+
+# 使用factor的方式。
+bond_rate <- factor(bond_rate, levels = c("B-","A-","A","A+","AA-","AAA"))
+table(bond_rate)
+```
+
+## Matrix 矩阵
+
+### 创建一个矩阵
+
+R语言中的Matrix（矩阵）和数学中的矩阵相似。比如我们创建一个3*4的矩阵：
+
+```{r}
+mat1 <- matrix(1:12, nrow = 3, ncol = 4, byrow = TRUE)
+mat2 <- matrix(1:12, nrow = 3, ncol = 4, byrow = FALSE)
+mat3 <- matrix(1:12, nrow = 3, byrow = FALSE)
+
+mat1
+mat2
+mat3
+```
+
+byrow限制了给定向量的填充顺序是按行填充还是按列填充。
+
+同样我们可以给Matrix的行（row）和列（column）命名：
+
+```{r}
+mat <- matrix(1:12, nrow = 3, ncol = 4, byrow = TRUE, 
+              dimnames = list(c("r1", "r2", "r3"), c("c1", "c2", "c3", "c4")))
+
+mat
+
+rownames(mat) <- c("Row1","Row2", "Row3")
+colnames(mat) <- c("Col1","Col2", "Col3", "Col4")
+
+mat
+```
+
+### 非数值型矩阵
+
+和Vector相同，Matrix要求其内的元素必须是同一个数据类型，但它可以不是numeric的。比如我们也可以建立character的矩阵，虽然它的很多数学计算无法实现。
+
+```{r}
+mat <- matrix(LETTERS[1:12], nrow = 3, byrow = TRUE)
+mat
+
+typeof(mat)
+```
+
+### 矩阵运算
+
+数量矩阵的数学计算和Vector一样，应该注意`*, /, ^`等运算是“点对点”的运算。要实现数学中的矩阵乘积需要使用`%*%`。
+
+```{r}
+mat1 <- matrix(1:16, nrow = 4, ncol = 4, byrow = TRUE)
+mat2 <- matrix(1:16, nrow = 4, ncol = 4, byrow = FALSE)
+
+mat1
+mat2
+mat1 + 2*mat2
+
+mat1 * mat2 # 每个元素之间的点对点乘积，并非矩阵乘积。
+mat1 / mat2
+mat1^2
+
+mat1 %*% t(mat2)
+mat1 %*% c(1, 3, 2, 4)
+```
+
+### 以如何计算OLS估计量参数为例子
+
+OLS参数的估计值为
+
+$$(X_{T}X)^{-1}X_{T}Y$$
+
+```{r}
+# 例如，如何计算OLS估计量参数。
+Y <- 1:2
+X <- matrix(c(2,0,0,4), nrow = 2, ncol = 2, byrow = TRUE)
+
+solve((t(X) %*% X)) %*% t(X) %*% Y
+
+# 计算结果有的时候需要近似。
+X <- matrix(c(1,11,221,3123,2112,333,222,857,123), nrow = 3, ncol = 3, byrow = FALSE)
+solve(X) %*% X
+```
+
+Matrix的拼接也是我们常用的操作之一：
+
+```{r}
+rbind(mat1, mat2)
+cbind(mat1, mat2)
+```
+
+### 矩阵元素访问
+
+Matrix内的元素选取规则和Vector非常相似，只是此时我们需要同时指定行和列两个维度。比如：
+
+```{r}
+mat1
+
+mat1[2, 3]
+mat1[1, ]
+mat1[, 2]
+mat1[, 1:3]
+mat1[, c(2, 4)]
+mat1[, -2]
+
+rownames(mat1) <- c("r1", "r2", "r3", "r4")
+mat1["r1", ]
+```
+
+同样，我们可以利用这种引用方式对特定元素直接进行修改：
+
+```{r}
+mat1[2, 3] <- 999
+mat1
+```
+
+也许你会觉得奇怪，对于Vector的选取方式同样适用于Matrix：
+
+```{r}
+mat1[3]
+mat2[2:5]
+```
+
+这是因为R语言中的Matrix在本质上仍然是一个Vector，只是它的表达方式和运算规则发生了改变。
+
+## Array 数组
+
+### 创建一个数组
+
+Array是Vector和Matrix向高维度的一个非常自然的扩展。前两者分别是一维和二维数据，而Array可以表现任意有限维数据。
+
+```{r}
+arr <- array(1:24, dim = c(2, 4, 3))
+arr
+```
+
+同样我们可以对Array中的各个维度命名：
+
+```{r}
+dimnames(arr) <- list(c("r1", "r2"), c("c1", "c2", "c3", "c4"), c("k1", "k2", "k3"))
+arr
+```
+
+当然，也可以利用dimnames参数在创建Array时命名。
+
+### 数组数据访问
+
+Array的数据选取方式也是Vector和Matrix数据选取方式的非常自然的扩展。
+
+```{r}
+arr[2, 3, 1]
+arr[, , 3]
+arr[, 3, ]
+arr["r1", ,]
+
+arr[15:18]
+```
+
+## List
+
+### 创建一个列表
+
+List（列表）是R语言中最灵活的数据结构，一个List里面可以包含各种不同的数据结构，甚至可以再嵌套一个List。
+
+一个简单的例子如下：
+
+```{r}
+x <- list(1:3, "a", c(TRUE, FALSE, TRUE), c(2.3, 5.9)) 
+str(x)
+```
+
+list对于我们管理一些有层次结构的数据很有帮助：
+
+```{r}
+john <- list(Name = "John", Birthplace = "America", Hobby = c("Movies", "Soccer"))
+paul <- list(Name = "Paul", Birthplace = "Autrialia", Hobby = c("Soccer"))
+chris <- list(Name = "Chris", Birthplace = "England", Hobby = c("Basketball"))
+
+members <- list(ClassA = list(John = john, Paul = paul), ClassB = list(Chris = chris))
+str(members)
+```
+
+### 列表元素访问
+
+有几个不同的方式来访问list中的元素。
+
+```{r}
+l1 <- list(a = 1,b = 2,c = 3)
+
+l1$a
+l1["a"]
+l1[["a"]]
+l1[c("a","b")]
+names(l1) <- c("A","B","C")
+```
+
+我们也可以通过`$`随时添加新的元素到list中。
+
+```{r}
+l <- list(a = c(1,2),b = c(2,3,4),c = "hello")
+l$d <- c(T, T, F)
+str(l)
+```
+
+实际上，随之你对R了解的不断深入，会惊奇的发现许多R的结果都是用list来表示的，并且可以直接提取出丰富的结果。
+
+```{r,eval=FALSE}
+# 利用lm函数来做回归。
+model <- lm(height ~ weight, data = women)
+str(model)
+model$coefficients
+```
+
+## Data Frame
+
+### 创建数据框
+
+Data Frame和一般的数据表相同。数据框中各列可以是不同类型的数据。数据框每列是一个变量，每行是一个观测。
+
+```{r}
+Name <- c("John", "Carl", "Jane")
+Math <- c(70, 90, 80)
+Physics <- c(80, 75, 85)
+Score <- data.frame(Name , Math , Physics)
+
+Score
+```
+
+### 元素访问
+
+Data Frame 同时有List和Matrix两者的特性，在访问元素的方式上，也是如此。
+
+```{r}
+df <- data.frame(x = 1:3, y = 3:1, z = letters[1:3])
+df[df$x == 2, ]
+df[c(1, 3), ]
+
+df[c("x", "z")]
+df[, c("x", "z")]
+
+str(df["x"])
+str(df[, "x"])
+```
+
+# 快速了解你的数据
+
+这些函数对于快速了解数据会有很多帮助：
+
+```{r}
+class(iris)
+str(iris)
+
+head(iris)
+tail(iris)
+tail(iris, n = 10)
+
+nrow(iris)
+ncol(iris)
+dim(iris)
+
+unique(iris$Species)
+table(iris$Species)
+```
+
+# 参考资料
+
+以上我们介绍了R语言中最基础的数据类型和结构，但实际上R语言对于数据结构的设计是很精巧而复杂的。如果你想更深入的了解相关的内容，推荐阅读以下资料：
+
+1. learnR, Basic Objects: http://renkun.me/learnR/basic-objects/index.html
+2. RClub 2014, Data Structures: https://github.com/wise-r/R-Training/blob/master/Chapter02/2.data_structures.Rmd
+3. RClub 2014, Subsetting: https://github.com/wise-r/R-Training/blob/master/Chapter03/3.1.subsetting.Rmd
+4. Advanced R, Data Structures: http://adv-r.had.co.nz/Data-structures.html
+5. Advanced R, Subsetting: http://adv-r.had.co.nz/Subsetting.html
+6. Try R：http://tryr.codeschool.com/

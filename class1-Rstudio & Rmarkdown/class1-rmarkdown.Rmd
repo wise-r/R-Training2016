@@ -1,0 +1,434 @@
+---
+title: "用rmarkdown写作实例"
+author: "WISERCLUB 王泽贤"
+date: "2016年10月11日"
+output:
+  pdf_document:
+    includes:
+      in_header: header.tex
+    latex_engine: xelatex
+  html_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# 简介
+
+本文是用*rmarkdown*书写的一个例子.介绍的是如何用R进行~~简单~~的**线性回归**.请将最终文档和Rmd文档配合学习.
+
+本文仅仅介绍了用R进行数据分析的一个粗略流程, 目的是希望通过本文例子让初学者对R和Rmarkdown有初步的了解. 
+
+数据结构和函数仅简要介绍本文例子中用到的几个,更多函数编程,画图,统计分析等内容请参考文中出现的**课后阅读**推荐的学习资料以及参加后续课程.
+
+**rmarkdown的优势**
+
+1. 内嵌代码代码和写作协同完成,无需在多个软件中复制粘贴.代码灵活性强,不止是R.
+
+2. 可重复性研究.
+
+3. 生成图表格式统一由代码定义,后续基本上无需调整.可以和R强大的绘图功能结合.
+
+4. 支持latex数学公式.美观大方.
+
+5. 沉浸式写作,舍弃了繁多的排版设定.
+
+6. 语法简单,上手快速.
+
+7. 输出格式多样,一份文档,多种呈现.后续仍可用html语法或word进行二次细化美化编辑.
+
+**markdown语法说明**
+
+1. “#“置于一段的开头用于定义标题,有n个”#“表示第n级标题.
+
+2. markdown中回车不换行,2个以上空格+回车,或者2次回车才是换行.
+
+3. 在一句话前面加上“1.空格”则可以加上有序标记并自带缩进效果.如本句.
+
+4. 给一段字两端加上”*“或"_"则成为斜体字,如简介中的”rmarkdown“.(导出中文pdf的时候可能失效,问题来源于tex系统兼容性)
+
+5. 两端加上”**“则为粗体字,如正文的"线性回归".
+
+6. 两端加上”~~“则为~~删除线~~.
+
+7. 需要分页时插入`\pagebreak`
+
+新建Rmarkdown的方法:`File-New File-R Markdown`
+
+使用前需要先安装knitr包,并把Tools-Global Option-Sweave-Weave Rnw files using 选择knitr, Typeset LaTex into PDF using 选择XeLaTex.
+
+\pagebreak
+
+# 数学公式与内嵌代码
+
+## 数学公式
+
+如
+
+$$Y_i=e^{\beta_1+\beta_2X_i+\epsilon_i}$$    
+
+$$Y_i=\frac{1}{e^{\beta_1+\beta_2X_i+\epsilon_i}}$$    
+
+$$Y_i=\beta_1+\beta_2(\frac{1}{X_i})+\epsilon_i$$  
+
+**markdown语法说明**
+
+1. rmarkdown支持latex的数学公式格式.
+
+2. 用 `$` 两端包围的公式可以显示在一个句子内部,用 `$$` 两端包围的公式会独占一行显示.没用 $ 符号标记的代码不会被识别为公式.
+
+3. 用“-空格“可以给一句话加上无序标记并自动缩进(如下第4点）.
+
+4. 上述方程的对应代码为
+
+```
+            $$Y_i=e^{\beta_1+\beta_2X_i+\epsilon_i}$$      
+
+            $$Y_i=\frac{1}{e^{\beta_1+\beta_2X_i+\epsilon_i}}$$    
+
+            $$Y_i=\beta_1+\beta_2(\frac{1}{X_i})+\epsilon_i$$  
+```
+
+  _常用的公式对应代码_
+  
+- 上标:`a^x`输出$a^x$, `b^{xy}`输出$b^{xy}$.
+
+- 下标:`a_x`输出$a_x$, `b_{xy}`输出$b_{xy}$.
+
+- 分数:`\frac{a}{b}`,输出$\frac{a}{b}$.
+
+- 积分号:`\int_0^1`,输出$\int_0^1$.
+
+- 求和号:`\sum_{i=1}`,用单个`$`输出$\sum_{i=1}$,用2个`$`输出$$\sum_{i=1}$$.
+
+- 极限:`\lim_{x \rightarrow 0}`输出$$\lim_{x \rightarrow 0}$$.
+
+**课后阅读:**
+
+*更多latex数学公式规则请见深入学习资料中的Latex-intro-ByTobias-cn.pdf(第三章)*
+
+\pagebreak
+
+## 内嵌代码
+
+在rmarkdown中可以轻松的内嵌代码,输出最终文件的时候会自动将所有Rmd文件中的代码按顺序重新运行,并将结果放在代码对应的位置.
+
+内嵌代码块的方式是用一个特殊标记将代码段包括在内, 具体标记方式请看Rmd文件中的写法.
+
+比如前文的公式,放入标记符号中的范围中就可以显示成代码:
+
+```
+$$Y_i=e^{\beta_1+\beta_2X_i+\epsilon_i}$$      
+
+$$Y_i=\frac{1}{e^{\beta_1+\beta_2X_i+\epsilon_i}}$$   
+
+$$Y_i=\beta_1+\beta_2(\frac{1}{X_i})+\epsilon_i$$  
+```
+
+如果需要内嵌R代码则需要在开头的标记符后面接上{r},则成为以下结果(具体标记方法请见Rmd文件中对应位置)
+
+```{r}
+1+2
+```
+
+默认是显示代码加上输出结果.可以通过点击代码块右上角的齿轮按钮对代码块命名,选择output设置可以设定更多细节,如
+
+```{r, echo=FALSE}
+library(ISLR) 
+library(knitr)
+data("Wage") 
+par(mfrow = c(1, 2)) 
+#figure 1 
+attach(Wage) 
+plot(year,wage,pch=19,col="grey",cex=0.5,ylab="Wage") 
+fit <- lm(wage~year) 
+abline(fit,col="#34459c",lwd=2) 
+detach(Wage) 
+#figure 2 
+boxplot(wage~unclass(education),data=Wage,pch=19,cex=0.5,
+        col=c("#5fa5d6","#08966c","#d2dd4e","#1d70b0","#cc6320"),
+        xlab="Education Level",ylab="Wage")
+
+```
+
+这是选择了show output only的结果,绘图代码可以查看Rmd文件.具体用法请参加我们后续课程的绘图部分.
+
+\pagebreak
+
+除了代码块以外,也可以嵌入行内代码比如以下内容:
+
+1+2的值为`r 1+2`
+
+实际上是通过:
+
+```{r}
+# 1+2的值为`r 1+2`
+```
+
+(由于转码显示问题, 上式以Rmd文件中形式为准)
+
+再比如:
+
+```{r}
+x = 5
+```
+
+然后直接在markdown中书写就有:
+
+`r x`的平方是`r x^2`
+
+实际上,上面这句话是通过以下代码实现:
+
+```{r}
+# `r x`的平方是`r x^2`
+```
+
+这一点在论文模型解释的时候相当方便. 如果你所有模型解释中涉及到的系数都是通过行内代码引用得到的, 那么当你需要更改数据,或者改变估计方法,只要参数个数和位置没变,那么只需要更换一下数据源,再点一下上面的knit, 所有的参数结果就都自动更正过来了.
+
+对于r语言代码块,右上角的下箭头可以运行前面所有的r语言代码块,右箭头则是运行当前代码块.或者可以像在R script中一样选中后运行
+
+**课后阅读:**
+
+*除了R也可以运行python,js等,有兴趣的同学可以参考*
+
+*[knitr Language Engines](http://rmarkdown.rstudio.com/authoring_knitr_engines.html)*
+
+*[http://rmarkdown.rstudio.com/authoring_knitr_engines.html](http://rmarkdown.rstudio.com/authoring_knitr_engines.html)*
+
+\pagebreak
+
+# 数据读取
+
+除了在rstudio基本操作中介绍的函数可以读取用户数据外,R和R的packages中也内置了一些数据可供使用,如
+
+```{r}
+dataclass1 <- women
+```
+
+则将women数据载入到dataclass1.
+
+**课后阅读:**
+
+*更多关于数据读取的函数请阅读并尝试课后推送的深度阅读材料中:*
+
+*Basic_Data_Structures文件夹内的“Import_data.pdf"或"Import_data.html”的具体函数代码.作者为2015年WISERCLUB负责人丑高武*
+
+除了直接在environment窗口中点击dataclass1来预览数据,还可以
+
+```{r}
+head(dataclass1)
+```
+
+head函数的作用是查看目标的前几行(默认6行).
+
+
+如果想要取得具体某一个变量
+
+```{r}
+h <- dataclass1$height
+head(h)
+```
+
+$可以作为引用符,这样height变量中的数据就被赋值到h变量中了
+
+## 数据结构
+
+上述的dataclass1是R的基本数据结构中的一种:data.frame. 其中的数据以R的数据类型之一numeric储存.
+
+查看数据结构可以通过:
+
+```{r}
+str(dataclass1)
+```
+
+\pagebreak
+
+R中包含了以下几种基本数据结构,按照纬度和内含元素是否同质可以分为
+
+纬度    |Homogeneous  |Heterogeneous
+--------|-------------|-------------
+1d      |Atomic vector|List
+2d      |Matrix       |Data frame
+3d      |Array        |            
+
+数据结构中可以容纳的数据类型包括
+logical(逻辑), integer(整数), double(双精度小数,一般也叫numeric), character(字符), 还有complex(复数) 和 raw. 
+
+**课后阅读:**
+
+*具体数据结构细节请阅读并尝试课后推送的深度阅读材料中:*
+
+*Basic_Data_Structures文件夹内的"Basic_Data_Structures.html"和"Basic_Data_Structure_2.html"的具体函数代码.作者为2015年WISERCLUB主负责人邓光宏.*
+
+*也可以直接阅读由R语言大师Hadley Wickham所著《Advanced R》的Data structures章节(英文)*
+
+*[Advanced R-Data structures]("http://adv-r.had.co.nz/Data-structures.html")*
+
+*["http://adv-r.had.co.nz/Data-structures.html"]("http://adv-r.had.co.nz/Data-structures.html")*
+
+**rmarkdown语法说明**
+
+对于简单的表格可以通过用|和-分割的方法进行制表.具体请看Rmd文件.
+
+\pagebreak
+
+# 描述性统计与探索性分析
+
+拿到数据以后在建模之前我们需要对数据形态进行观察,进而选择适合的模型.最简单的操作包括计算描述性统计量,画图等.
+
+## 简单的一些统计量
+
+```{r}
+summary(dataclass1)
+```
+
+summary函数用在一个数据集上可以获得各个变量的一些描述性统计量,如均值,极值等.
+
+其他函数还有
+
+```{r}
+mean(h) #求H变量的均值
+cor(dataclass1$height,dataclass1$weight) #求height和weight变量的相关系数
+cov(dataclass1$height,dataclass1$weight) #求height和weight变量的协方差
+sd(h) #求h变量的标准差
+```
+
+可以看到weight和height变量相关性很高.
+
+\pagebreak
+
+## 表格生成
+
+我们可以把描述性统计量整合成一个表格
+```{r}
+stattable <- rbind(c("weight",mean(dataclass1$weight),sd(dataclass1$weight)),
+                   c("height",mean(dataclass1$height),sd(dataclass1$height)))
+library(knitr)
+kable(stattable, col.names = c("变量","均值","标准差"),caption = "Table 1", align = "c")
+
+```
+
+kable函数中caption参数定义的是表的名字. 该函数会自动统计pdf文件中有多少个表格,并默认在表名前面加上Table1,Table2.
+
+前面的表格因为不是用kable函数生成的,所以没有自动加Table1.
+
+kable只是一个简单的出表函数,此外还有xtable, tables, ascii, pander等函数可以用于出表和对表进行修改. 具体可在安装对应包后在R控制台中help查看.  
+
+*更多数据处理相关内容请参加我们后续的数据处理模块课程学习*
+
+\pagebreak
+
+## 画图
+
+plot函数为最基本的绘图函数,也提供了最基本的绘图功能.在下面的例子中,使用格式为:
+
+plot(x轴变量,y轴变量,main="图名",xlab="横轴名称",ylab="纵轴名称",pch = 点形状, cex = 缩放倍数, type = 线点类型)
+
+```{r}
+plot(women$height,women$weight,main="Women Age 30-39",xlab="Height",ylab="Weight", pch = 16,cex =0.8, type = "b")
+```
+
+*更多绘图技巧请参加我们后续的绘图模块课程学习*
+
+\pagebreak
+
+# 线性回归
+
+## lm函数
+
+R中自带了lm函数可以用于线性回归.用法:lm(y变量~x1变量+x2变量+.... , data = 变量所在的数据集), 对lm回归后的对象(fit)使用summary可以得到线性回归的各个统计量
+
+```{r}
+fit <- lm(weight ~ height, data = women)
+summary(fit)
+```
+
+我们可以尝试加入height变量的平方项:
+
+```{r}
+fit2 <- lm(weight ~ height + I(height^2), data=women)
+summary(fit2)
+```
+
+### 获取结果
+
+我们可以用$引用符直接引用其中的参数如:
+
+```{r}
+fit$coefficients[2]
+```
+
+### 写出模型
+
+比如我们要写出fit对应的模型:
+
+代码：
+```{r}
+# $$weight = `r fit$coefficients[1]` + `r fit$coefficients[2]` \times height$$
+```
+
+效果：
+
+$$weight = `r fit$coefficients[1]` + `r fit$coefficients[2]` \times height$$
+
+之后可以进行模型评价与解释等
+
+*更多统计建模相关内容请参加我们后续的统计分析模块课程学习*
+
+\pagebreak
+
+# 其他
+
+## 如何输出最终文件
+
+如果需要输出新建rmarkdown文件时指定格式意外的格式, 点击上面knit按钮右边的小三角形即可选择.
+
+对于html和word格式无需额外配置, 中英文均可直接输出.
+
+对于英文pdf则需要安装tex系统.ctex, texlive等均可.建议安装ctex
+
+[ctex下载地址, 建议下载稳定完整版(1.34G)](http://www.ctex.org/CTeXDownload)
+
+[http://www.ctex.org/CTeXDownload](http://www.ctex.org/CTeXDownload)
+
+对于中文pdf,除了安装好ctex等包含中文组建的tex系统外,还需要进行以下配置:
+
+1. 把课程资料中的Chinese template文件夹内的"header.tex"文件和需要输出中文的Rmd文件放在同一个文件夹下.
+
+2. 把Rmd开头的output下属选项改成以下内容再输出pdf：
+
+```
+output: 
+  pdf_document: 
+    latex_engine: xelatex
+    includes:
+          in_header: header.tex
+```          
+
+3. 或者安装完ctex后直接用本节课资料中Chinese template文件夹中附带的模版Rmd文件"Chinese template.Rmd"进行修改(需确保"header.tex"文件和Rmd文件在同一个文件夹内).
+
+## 在rmarkdown中插入网址:
+
+代码:
+```
+[厦门大学经济学院](http://economic.xmu.edu.cn/)
+```
+
+中括号[]内的是网址超链接要显示的文字.
+
+效果：
+
+[厦门大学经济学院](http://economic.xmu.edu.cn/)
+
+## 在rmarkdown中插入图片
+
+```
+![wiserclub](http://i.imgbox.com/qNJQcj7P.jpg)
+```
+
+效果：
+
+![wiserclub](http://i.imgbox.com/qNJQcj7P.jpg)
+

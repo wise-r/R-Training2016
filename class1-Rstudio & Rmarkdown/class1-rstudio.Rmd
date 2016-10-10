@@ -1,0 +1,318 @@
+---
+title: "Rstudio基本操作"
+author: "WISERCLUB王泽贤"
+date: "2016年10月11日"
+output:
+  word_document: default
+  pdf_document:
+    includes:
+      in_header: header.tex
+    latex_engine: xelatex
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#界面一览
+
+![](C:\Users\elara\Desktop\c1\1.png)
+
+#菜单
+
+![](C:\Users\elara\Desktop\c1\2.png)
+
+File-打开、新建、关闭、保存等
+
+Edit-撤销、重做、复制、粘贴等
+
+Session-重启、新开R核心程序等
+
+Tools-安装package、各种设置等
+
+下面的按钮分别是新建、打开、保存、全部保存等快捷键
+
+具体请用鼠标移到上面看说明
+
+\pagebreak
+
+##全局设置
+
+Tools->global option
+
+###General
+
+![](C:\Users\elara\Desktop\c1\3.png)
+
+R version:选择Rstudio中使用的R核心版本
+
+Default working directory:默认工作目录
+
+工作目录是R默认的读取数据,生成文件的地方.将所需的文件放在工作目录中就可以直接读取名字而不需要指定具体地址
+
+每次重启rstudio都会把工作目录返回到默认工作目录
+
+###Code
+
+![](C:\Users\elara\Desktop\c1\4.png)
+
+选择保存为utf8
+
+\pagebreak
+
+###Appearance
+
+Zoom:缩放界面
+
+Editor font:代码字体
+
+Font size:字体大小
+
+Editor theme:代码界面主题
+
+\pagebreak
+
+\newpage
+
+###Pane Layout
+
+![](C:\Users\elara\Desktop\c1\5.png)
+
+第一次安装默认情况
+
+左上:代码编辑器
+
+左下:控制台,负责代码输入与结果输出,直接与R核心交互
+
+右上:主要包括环境(包括现在已经载入的变量,数据,函数等),历史记录(History)
+
+右下:包括Files(相当于一个文件浏览器),Plots(绘制的图像),Packages(已安装的包),Help(帮助文件),View(数据浏览器)
+
+\pagebreak
+
+\newpage
+
+###Packages
+
+![](C:\Users\elara\Desktop\c1\6.png)
+
+CRAN mirror:下载包时用的服务器(建议选择China开头的服务器)
+
+\pagebreak
+
+\newpage
+
+#Rstudio各个窗口操作
+
+##控制台（console）
+
+在控制台中你可以直接输入代码，回车后即运行，如果有输出内容则输出于控制台
+
+在控制台中的操作就几乎和在原版R中操作相似
+
+![](C:\Users\elara\Desktop\c1\7.png)
+
+回车后
+
+![](C:\Users\elara\Desktop\c1\8.png)
+
+其他例子可以自行尝试:
+
+2*2
+
+10/3
+
+3^10
+
+log10(100)
+
+pi
+
+sin(pi/2)
+
+**Tips:**
+
+在控制台中,键盘上的上下箭头可以快速帮你重新输入之前输入过的代码
+R中所有的符号都要用英式的,用中式会报错(建议切换到英文输入法)
+
+\pagebreak
+
+\newpage
+
+##Files
+
+就是一个文件浏览器,使用方法基本上和系统自带的浏览器差不多,点击可以用系统当前默认软件打开文件
+
+如果想要设置某个文件夹为工作目录,可以在浏览器中找到文件夹并进入,点击more,选择set as working directory
+
+如果找文件走丢了,可以选go to working directory返回工作文件夹
+
+工作文件夹也可以通过在控制台中输入setwd(“C:/R”)来设定,其中C:/R可以替换成你需要的地址
+
+注意在windows系统中,直接从系统文件管理器地址栏中复制的地址格式为“C:\\R”,而在R中你需要把所有“\\”替换成“\\\\”或者“/”
+
+如果你想知道当前工作文件夹的地址可以在控制台中输入getwd()并回车
+
+![](C:\Users\elara\Desktop\c1\9.png)
+
+\pagebreak
+
+\newpage
+
+##Plots
+作图指令默认会在Plots中画出图像,如图
+
+![](C:\Users\elara\Desktop\c1\10.png)
+
+**Tips:**
+
+Zoom按钮可以在窗口中打开图像
+
+Export按钮可以把图导出,目前可以导成图片、pdf或者直接复制到剪贴板
+
+后面2个按钮可以删除图像
+
+\pagebreak
+
+\newpage
+
+##Packages
+
+包是R保持生命活力的关键,不断地有人开发新的包来为R添砖加瓦
+
+包也是R保持简洁小巧的关键,你只要按需安装扩展包而不用把所有功能都下载
+
+包下载的时候是个zip文件,安装其实就是解压到电脑上指定的库(library)中
+
+库:存放已安装的包的位置
+
+###查询当前默认库的位置
+
+在控制台输入.libPaths()并回车
+
+R包会默认装到第一个文件夹中
+
+###安装R包
+
+- Tools->install packages
+
+- Packages窗口点击install
+
+![](C:\Users\elara\Desktop\c1\11.png)
+
+在空白栏输入包名.如果输入包名的过程中没有弹出下拉匹配选项很可能这个包不存在于CRAN库中
+
+- 代码安装
+
+在控制台输入install.packages(“包名”)
+
+如install.packages(“ggplot2”)
+
+###加载R包
+
+library(“包名”),如library(“car”)
+
+包需要加载才运行,每次重启R后会清空运行状态(需要重新加载)
+
+###更新R包
+
+Packages窗口点update
+
+选择要更新的包,点install updatas
+
+###卸载包
+
+就是每个包后面的打叉按钮
+
+或者使用控制台命令remove.packages("包名")
+
+**Windows tips:**
+
+1. 备份和恢复
+
+备份:直接把.libPaths()指令告诉你的文件夹复制到你要备份的地方
+
+恢复:把备份的再复制回来.libPaths()指定的地方即可
+
+2. 出错处理
+
+安装失败却无法卸载的情况下可以直接到.libPaths()指令告诉你的文件夹中找到包名对应的文件夹删除再重试
+
+\pagebreak
+
+\newpage
+
+##Environment
+
+读取的数据,建立的变量等都会出现在这个窗口,扫把按钮可以删除所有项目
+在R中用 <- 符号来赋值,多数情况下 <- 和 = 效果相同.
+
+```{r}
+a <- c(1:10)
+```
+
+![](C:\Users\elara\Desktop\c1\12.png)
+
+读取aa-rv-20m.txt数据并赋值给txt变量:
+
+```
+txt <- readLines("aa-rv-20m.txt")
+```
+
+读取csv格式并赋值给data变量:
+
+```
+data <- read.csv("example_entry.csv")
+```
+
+![](C:\Users\elara\Desktop\c1\13.png)
+
+对于分类在Data类别的数据可以点击查看
+
+![](C:\Users\elara\Desktop\c1\14.png)
+
+列出变量:ls()
+删除变量:rm(a)
+全部删除:rm(list=ls())
+
+\pagebreak
+
+\newpage
+
+##Source
+
+R script:R脚本文件,可以在其中编辑代码
+
+###新建方式
+
+Ctrl+shift+N
+
+Flie->New file->R script
+
+加号按钮->R script
+
+###使用方法
+
+写好代码后,鼠标选中需要运行的部分,点击run或者键盘上按ctrl+回车
+
+![](C:\Users\elara\Desktop\c1\15.png)
+
+Rstudio将会逐行运行代码,就好像我们一行一行在控制台中键入并运行一样
+你可以打开别人写好的文件运行,或者自己写好文件发送给别人使用
+
+##帮助系统
+
+遇到不懂的函数可以
+
+如果函数所在的包已经被加载,直接在控制台中输入help(“函数名”)
+
+未加载的时候可以用
+
+?函数名
+
+或者
+
+??函数名 (模糊搜索)
+
+在help窗口中即弹出函数名对应或相关的函数文档或者超链接

@@ -1,0 +1,42 @@
+---
+title: "R Markdown中文pdf输出模版"
+author: "王泽贤"
+date: '2016年10月8日'
+################################“#“范围内请勿修改
+#请确认Rmd文件和header.tex在同一个文件夹中
+#header.tex可编辑，可改字体，保存时请务必保存为utf-8无BOM编码格式(在rstudio中编辑自动保存为此格式)
+output: 
+  pdf_document: 
+    latex_engine: xelatex
+    includes:
+          in_header: header.tex
+################################”#“范围内请勿修改
+---
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+这是一个R Markdown文件。 更多细节请看[rmarkdown.rstudio.com](http://rmarkdown.rstudio.com)
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## 插入图片
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+## 输入公式
+
+$$y_1=x^2+\sum{a_x}+\frac{1}{ddd}$$
