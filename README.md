@@ -17,5 +17,3 @@ R基础学习-控制流、函数、pply族
 
 ###class6-Regular expression and stringr
 字符串操作：正则表达式及stringr
-
-###class7-ggplot
