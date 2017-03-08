@@ -1,0 +1,224 @@
+---
+title: "data.table_note--Efficient reshaping using data.tables"
+author: "王泽贤"
+date: "2016年12月7日"
+output: 
+  pdf_document: 
+    latex_engine: xelatex
+    includes:
+          in_header: header.tex
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## 简介
+
+在`data.tables`中，`reshape2`包中的对应函数被扩展为`melt`和`dcast`。
+
+在本章中，我们要做的是：
+
+1. 简短的介绍如何用`data.table`中默认的`melting`和`casting`函数来将数据在`wide`和`long`形式之间转换。
+
+2. 通过一个场景实现，认识现在函数的笨重和低效。
+
+3. 最后学习如何用新的`melt`和`dcast`方法来高效处理数据塑性问题。
+
+*注意：如果你需要使用同时使用data.table和reshape2的函数，请确保data.table在reshpe2之后加载*
+
+## 1. 默认功能
+
+```{r}
+library(data.table)
+```
+
+
+### a) melting (wide to long) 
+
+假设我们有一个人造的数据：
+
+```{r}
+DT = fread('melt_default.csv')
+DT
+```
+
+```{r}
+str(DT)
+```
+
+这是一个`wide`形式的数据
+
+- 转换`DT`为`long`形式数据，使得每个`dob`列（变量）的名字，变成一个新变量`variable`中的值。
+- 原本的同一个样本，按照`dob`列，扩展为多个样本。
+
+```{r}
+DT.m1 <- melt(DT, id.vars = c('family_id', 'age_mother'), 
+              measure.vars = c('dob_child1', 'dob_child2', 'dob_child3'))
+DT.m1
+```
+
+```{r}
+str(DT.m1)
+```
+
+*说明*
+
+1. `measure.vars` 指定了我们需要合并的变量
+2. 我们也可以直接指定哪几列，而不是繁琐地输入名字，如`measure.vars = c(3,4,5)`
+3. 默认情况下，合并后的新变量`variable`是`factor`,可以在函数中附加`variable.factor=FALSE`来返回字符变量(只有在加载了`data.table`包后才有这个功能)
+4. 默认情况下，合并后的列会被放入`variable`和`value`中
+5. `id.vars`是需要保留的变量
+`
+- 为合并后产生的新变量命名
+
+```{r}
+DT.m1 <- melt(DT, measure.vars = c('dob_child1', 'dob_child2', 'dob_child3'), 
+              variable.name = 'child', value.name = 'dob')
+DT.m1
+```
+
+*说明*
+
+1. 默认情况下，如果`id.vars`没有指定，那么程序会自动把`measure.vars`之外剩下的所有变量都放进去。反之亦然。
+2. 如果`id.vars`和`measure.vars`都没有指定，那么所有非 数值、整数、逻辑 列都会被放入`id.vars`中。并且此时会有一个警告，提示你自动放入的变量是哪些
+
+### b) Casting (long to wide)
+
+在前面的小节中，我们看到了如何把`wide`形式的数据转化为`long`形式。这一节我们要学习如何反向转化
+
+- 如何从`DT.m`转化回原始的`DT`
+
+我们希望把具有同样的`family_id`和`age_mother`的数据的不同`child`合并到同一行：
+
+```{r}
+dcast(DT.m1, family_id + age_mother ~ child, value.var = 'dob')
+```
+
+*说明*
+
+1. dcast中的公式用法：`~`左边是要保留的变量(`id vars`)，右边是要转换的变量(`measure vars`)。
+
+2. `value.var`是用来填充到每一行的数据列名。
+
+- 利用`DT.m`，如何获得每个家庭中的孩子数
+
+将计算函数传入`fun.aggregate`(简写`fun.agg`)。
+
+```{r}
+dcast(DT.m1, family_id ~ . ,fun.agg = function(x) sum(!is.na(x)), value.var = 'dob')
+```
+
+*说明*
+
+1. `family_id ~ .` 表示用`family_id`作为分组计算变量
+
+2. `fun.agg = function(x) sum(!is.na(x))` 表示对传入的x，计算不是`NA`的个数
+
+3. `value.var`是传入`fun.agg`中的x
+
+## 2.melt/dcast 方法的限制
+
+前面所诉的`melt`和`dcast`方法基于`reshape2`包，但是已经经过`data.table`的改进，效率更高
+
+但是在某些情形下，我们会发现我们想要的需求无法用一个直接的语法来实现，比如：
+
+```{r}
+DT <- fread('melt_enhanced.csv')
+DT
+## 1 = female, 2 = male
+```
+
+如果你需要把用`melt`把所有的`dob`列合并成一列，`gender`列合并成一列，用原来的方法：
+
+```{r}
+DT.m1 = melt(DT, id = c("family_id", "age_mother"))
+```
+
+```{r}
+DT.m1[, c("variable", "child") := tstrsplit(variable, "_", fixed = TRUE)]
+```
+
+```{r}
+DT.c1 = dcast(DT.m1, family_id + age_mother + child ~ variable, value.var = "value")
+DT.c1
+```
+
+```{r}
+str(DT.c1)
+```
+
+你会发现`gender`变成字符串了
+
+*问题*
+
+1. 我们只是想把`dob`和`gender`列各自合并，却需要全部合并在一起，再分开。
+
+2. 要合并的列可能是不同的数据类型，一开始全部合并后，会被强制转换。
+
+3. 操作繁琐，计算量大
+
+## 3. 强化版的(新)功能
+
+### a) 加强的melt
+
+- 同时使用`melt`合并多个行
+
+想法很简单，我们向`measure.vars`中传入由多个列组成的`list`，这些列就是我们想要合并的列
+
+```{r}
+colA <-  paste('dob_child', 1:3, sep = "") 
+colB <-  paste('gender_child', 1:3, sep = "")
+DT.m2 <- melt(DT, measure = list(colA, colB), value.name = c('dob', 'gender')) 
+DT.m2
+```
+
+*说明*
+
+1. `measure`传入要合并的所有列的列名，用list的不同元素区分分组
+
+2. `value.name` 指定合并后产生的新变量列名
+
+3. 额外生成的`variable`是指的是这些数据来源于`list`中第一个变量组的第几个变量
+
+```{r}
+str(DT.m2)
+```
+
+可以看到这样操作的时候，列的原始数据类型都会保留。
+
+- 使用`patterns()`
+
+有时候我们需要合并的变量的名字有一定的规律，那么就可以用`pattern()`函数，可以通过正则表达式来指定要合并的列名：
+
+```{r}
+DT.m2 <- melt(DT, measure = patterns('^dob','^gender'), value.name = c('dob', 'gender'))
+DT.m2
+```
+
+这些功能全部以C语言重写，速度和效率都有很大进步。
+
+### b) 加强的dcast
+
+现在我们已经可以方便地把多个列同时各自合并。现在给定`DT.m2`，如何转换回去？
+
+如果我们用之前的`dcast`的功能，那么我们必须拆分2次再合并结果。存在的问题和之前的`melt`一样。
+
+- 同时拆分多个列
+
+```{r}
+DT.c2 <- dcast(DT.m2, family_id + age_mother ~ variable, value.var = c('dob','gender'))
+DT.c2
+```
+
+*说明*
+
+1. 按照`variable`分组拆分，用`value.var`内的列为填充值。如`variable`为1的`dob`为一组取出来
+
+2. 同样可以在其中使用`fun.agg`函数来进行计算如
+
+```{r}
+dcast(DT.m2, family_id + age_mother ~ variable, fun.agg = function(x) sum(!is.na(x)), value.var = c('dob','gender'))
+```
+
+也就是说如果没有指定`fun.agg`，那么则用`value.var`的列的原始值作为填充，如果有指定`fun.agg`那么就要会输出`fun.agg`计算后的内容。本例中即变成求每种符合条件的非NA个数。
