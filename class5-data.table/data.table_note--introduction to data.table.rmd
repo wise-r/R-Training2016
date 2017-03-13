@@ -1,0 +1,402 @@
+---
+title: "data.table_note--introduction to data.table"
+author: "王泽贤"
+date: "2016年12月7日"
+output: 
+  pdf_document: 
+    latex_engine: xelatex
+    includes:
+          in_header: header.tex
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## 用data.table进行数据分析
+
+诸如取子集、分组、更新、合并等数据操作本质上是联系在一起的。如果能够将这些相关操作联系在一起那么将可以：
+
+- 统一一套简洁的关于所有数据操作的语法
+- 减轻分析过程中由于需要了解不同作用函数的用法的认识负担
+- 统一在一套系统中可以自动优化操作过程的内部计算，更加高效、快速、节省内存
+
+简而言之，如果你希望能够极大地减少编程和计算的时间，那么这个包非常适合你。`data.table`的哲学就是希望如此。
+
+### 数据介绍与读取
+
+在本介绍中，我们采用`NYC-flights14`数据集。这个数据集来源于`Bureau of Transporation Statistics`，包括2014年1月到10月，从`New York City`机场起飞的所有飞机的准点情况数据。
+
+`data.table`中提供了数据读取函数`fread`,类似于`read.table`但更快，要求数据的每一列的行数相同。可以直接读取`csv`,甚至是网页连接的数据。也可以在读取的时候直接选择所需的行和列进行读取。更多例子和说明请使用`help(fread)`查询。
+
+```{r}
+library(data.table)
+flights <- fread("flights14.csv")
+flights
+```
+
+```{r}
+dim(flights)
+```
+
+## data.table用法介绍
+
+本节内容：
+
+1. 选择行、选择和计算列
+
+2. 分组汇总
+
+### 1.基础
+
+#### a) 什么是data.table
+
+`data.table`是一个加强版的`data.frame`。在*数据介绍与读取*小节中，我们已经通过`fread()`创造了一个`data.table`。除此之外，我们也可以直接用`data.table()`函数直接创造一个`data.table`
+
+```{r}
+DT = data.table(ID = c("b","b","b","a","a","c"), a = 1:6, b = 7:12, c = 13:18)
+DT
+```
+
+```{r}
+class(DT$ID)
+```
+
+不同与`data.frame`的默认形式，`data.table`默认不转化字符为因子，可以避免一些不必要的麻烦。需要的时候可以通过`factor()`转化所需的列成为因子。
+
+也可以通过`as.data.table()`将已有数据对象转化为`data.table`。
+
+另外通过`datatable.print.nrows (100)`，可以制定在命令行中输入一个数据集名字后，显示出来的行数(比如100)，而不是一次性显示所有内容。
+
+#### b) data.table加强在什么地方？
+
+`data.table`引入了`SQL`语言中的一些概念，并加以简化，对应如下：
+
+```
+DT[i,j,by]
+R:       i          |      j         |by
+SQL: where  select  |  update  group |by
+```
+
+如果你使用过SQL语言，那么将能够更快上手。
+
+`DT[i,j,by]` 翻译成人类语言就是：对于DT这个数据集，取出其中满足`i`条件的行，然后根据`j`的要求对各个变量（列）计算，并且按照`by`的要求进行分组。
+
+下文中我们称`i,j,by`为`参数`
+
+#### c) 根据i参数选择行
+
+- 选出航班中，`origin`变量是“JFK”，且`month`变量是六月的数据
+
+```{r}
+ans <- flights[origin == "JFK" & month == 6L]
+head(ans)
+```
+
+需要注意的是多个条件同时满足要用`&`连接，如果是满足其中一个即可那要用`|`连接。`==`表示相等条件。
+
+在`data.table`中，引用列也可以使用传统的`data.frame`方式：`flights$month` 来完成
+
+在`data.table`中，直接用`flights[条件]`即可筛选，当然用`data.frame`方式：`flights[条件,]`也是可以的。
+
+- 选出最开头的两行
+
+```{r}
+ans <- flights[1:2]
+ans
+```
+
+可以直接通过行号向量来指定抽取的行，同样的，可以省略逗号。
+
+- 对所有数据按照`origin`列升序排列，之后再按照`dest`列降序(加上负号)排列，`order`中可以包含一个或以上的排序条件。
+
+```{r}
+ans <- flights[order(origin,-dest)]
+head(ans)
+```
+
+`data.table`中提供了高速版本的`order`函数，通过这个函数可以使排序速度提高15倍以上。在大数据集中提升更加明显。
+
+#### d) 通过j参数选择列
+
+- 选出`arr_delay`列，返回向量
+
+```{r}
+ans <- flights[, arr_delay]
+head(ans)
+```
+
+对于j参数，由于排在i参数之后，为了避免混淆所以每次使用都需要在前面加上i参数的条件和逗号，如果没有i参数条件，那么直接加个逗号即可。
+
+注意此时返回的是一个向量。如果我们希望返回的是`data.table`则:
+
+- 选出`arr_delay`列，返回`data.table`
+
+```{r}
+ans <- flights[, list(arr_delay)]
+head(ans)
+```
+
+除此之外还有一个更加简略的写法
+
+```{r}
+ans <- flights[, .(arr_delay)]
+head(ans)
+```
+
+同样可以返回一个`data.table`。后文中我们都用这个简略写法。
+
+j参数配合`.()`或者`list()`还有更多灵活的用法比如：
+
+- 选择多列，如`arr_delay`和`dep_delay`
+```{r}
+ans <- flights[, .(arr_delay, dep_delay)]
+ans
+```
+
+- 选择多列并重命名，如将`arr_delay`和`dep_delay`重命名为`delay_arr`和`delay_dep`
+
+```{r}
+ans <- flights[, .(delay_arr = arr_delay, delay_dep = dep_delay)]
+head(ans)
+```
+
+#### e) 通过j参数对列进行计算
+
+- 有多少航班的总延迟时间小于0？（即提前到达）
+
+```{r}
+ans <- flights[, sum((arr_delay + dep_delay)<0)]
+ans
+```
+
+翻译：对flights数据集，选择所有行，计算判断每行(arr_delay + dep_delay)<0是否为TRUE，并求和计算总数量，并返回结果。
+
+简而言之j参数中的变量名可以直接当成普通的一个变量来应用，并进行计算。
+
+#### f) 选择i条件的行，并进行j要求的计算
+
+- 计算所有origin变量为“JFK”的航班，在6月的的平均到达和出发延误时间
+
+```{r}
+ans <- flights[origin == "JFK" & month == 6L, 
+               .(m_arr = mean(arr_delay),m_dep = mean(dep_delay))] 
+ans
+```
+
+- 6月从“JFK”起飞的航班有多少？
+
+```{r}
+ans <- flights[origin == "JFK" & month ==6L, length(dest)]
+ans
+```
+
+上述做法是通过选择满足i参数的行，然后计算其中任意一个变量（这边选了dest）的长度，从而获得满足条件的行数。
+
+```{r}
+ans <- flights[origin == "JFK" & month == 6L, .N]
+ans
+```
+
+第二种做法通过`.N`替代`length(dest)`来计算个数，`.N`是`data.table`中用于返回行数的特殊符号。
+
+当然也可以使用`nrow(flights[origin == "JFK" & month == 6L])`来实现，但是这样做的速度和内存开销都比直接加入`.N`符号效果差。
+
+#### g) 通过.SD和.SDcols在j中灵活选取多个列
+
+前面的方法中，如果要计算多个列的均值，我们需要`flights[, .(m_arr = mean(arr_delay),m_dep = mean(dep_delay))]`,然而如果有成千上万列，一个一个写进`.()`不太现实。`data.table`中提供了`.SD`符号来解决这个问题。
+
+`.SD`符号表示“所有变量“，换言之，使用.SD就相当于把所有变量的名字写进一个向量中。
+
+前面我们已经生成了一个简单的数据集`DT`,为了方便演示，我们使用这个数据集进行说明
+
+```{r}
+DT
+```
+
+显然，`ID`变量是无法计算均值的，它是文本向量。直接使用`.SD`把所有变量扔进去算均值肯定要出错。`data.table`又提供了`.SDcols`来解决这个问题。
+
+`.SDcols`符号表示`.SD`符号中要包含的变量名字，例如指定`.SDcols = c("arr_delay","dep_delay")`就可以让`.SD`只引用2个变量。
+
+也可以用`.SDcols = -c("arr_delay","dep_delay")`，通过假上一个负号（感叹号!也行），来指定`.SD`中取所有变量，但是不包含这2个变量
+
+一个具体例子：
+
+```{r}
+DT[, lapply(.SD, mean), .SDcols = -c("ID")]
+```
+
+其中的`lapply(.SD, mean)`表示把.SD中的所有东西，一个一个地放入`mean()`函数，并返回结果。你可以指定其他函数名进行计算
+
+### 2.分组汇总
+
+#### a) 通过by函数分组
+
+- 计算每个`origin`变量类别的航班数
+
+```{r}
+ans <- flights[, .(.N), by = .(origin)]
+ans
+```
+
+也可以通过`flights[, .N, by = "origin"]`来完成。
+
+- 计算每个`origin`变量类别中`carrier`变量为“AA”的航班数
+
+```{r}
+ans <- flights[carrier == "AA", .N, by = origin]
+ans
+```
+
+- 交叉分组：计算每组`origin`和`dest`变量中，`carrier`变量为“AA”的航班数
+
+```{r}
+ans <- flights[carrier == "AA", .N, by = .(origin,dest)]
+ans
+```
+
+也可以用`flights[carrier == "AA", .N, by = c("origin", "dest")]`来实现。
+
+- 更复杂的情况，想想这是什么意思？
+
+```{r}
+ans <- flights[carrier == "AA",
+	.(mean(arr_delay), mean(dep_delay)),
+	by = .(origin, dest, month)]
+ans
+```
+
+我们可以看到by函数返回的时候顺序是按原始数据的顺序返回的。
+
+#### b) keyby
+
+如果我们希望按照分组变量的内容来排序：
+
+```{r}
+ans <- flights[carrier == "AA",
+	.(mean(arr_delay), mean(dep_delay)),
+	keyby = .(origin, dest, month)]
+ans
+```
+
+by改成keyby即可
+
+keyby在内部是首先用by分组计算后，再进行的位置调整。
+
+#### c) Chaining连锁操作
+
+- 考虑之前的交叉分组：计算每组`origin`和`dest`变量中，`carrier`变量为“AA”的航班数
+
+
+```{r}
+ans <- flights[carrier == "AA", .N, by = .(origin,dest)]
+ans
+```
+
+现在我们希望对得到的结果再根据某个变量排序，比如根据`origin`升序，`dest`降序，则可以在结果后加入`[order(origin, -dest)]`进行连锁操作
+
+```{r}
+ans <- ans[order(origin, -dest)]
+head(ans)
+```
+
+既然是叫连锁操作，自然我们可以连续写完一组操作
+
+```{r}
+ans <- flights[carrier == "AA", .N, by = .(origin, dest)][order(origin, -dest)]
+head(ans)
+```
+
+加入更多的`[...]`可以进行多步连锁操作
+
+#### d) by中的表达式
+
+事实上by函数不仅仅可以用来选择分组变量，如果在其中使用表达式也可以做到用计算后变量分组的效果
+
+```{r}
+ans <- flights[, .N, .(dep_delay>0, arr_delay>0)]
+ans
+```
+
+当然也可以只对一个变量计算，另一个变量直接分组
+
+```{r}
+ans <- flights[, .N, .(origin, arr_delay>0)]
+ans
+```
+
+#### e) 组合使用
+
+```{r}
+flights[carrier == "AA",                  
+	lapply(.SD, mean),                    
+	by = .(origin, dest, month),          
+	.SDcols = c("arr_delay", "dep_delay")]
+```
+
+### 3.简单数据塑型
+
+回顾下开头创建的`DT`
+
+```{r}
+DT
+```
+
+
+- 把每种ID的b数据接到a数据下
+
+```{r}
+DT[, .(val = c(a,b)), by = ID]
+```
+
+- 把每种ID的b数据和a数据连接并返回list
+
+```{r}
+DT[, .(val = list(c(a,b))), by = ID]
+```
+
+对比：
+
+```{r}
+DT[, print(c(a,b)), by = ID]
+```
+
+```{r}
+DT[, print(list(c(a,b))), by = ID]
+```
+
+### 4.总结
+
+基本操作形式：`DT[i, j, by]`
+
+Using i:
+
+- We can subset rows similar to a data.frame - except you don’t have to use DT$ repetitively since columns within the frame of a data.table are seen as if they are variables.
+
+- We can also sort a data.table using order(), which internally uses data.table’s fast order for performance.
+
+We can do much more in i by keying a data.table, which allows blazing fast subsets and joins. We will see this in the “Keys and fast binary search based subsets” and “Joins and rolling joins” vignette.
+
+Using j:
+
+- Select columns the data.table way: DT[, .(colA, colB)].
+- Select columns the data.frame way: DT[, c("colA", "colB"), with = FALSE].
+- Compute on columns: DT[, .(sum(colA), mean(colB))].
+- Provide names if necessary: DT[, .(sA =sum(colA), mB = mean(colB))].
+- Combine with i: DT[colA > value, sum(colB)].
+
+Using by:
+
+- Using by, we can group by columns by specifying a list of columns or a character vector of column names or even expressions. The flexibility of j, combined with by and i makes for a very powerful syntax.
+
+- by can handle multiple columns and also expressions.
+
+- We can keyby grouping columns to automatically sort the grouped result.
+
+- We can use .SD and .SDcols in j to operate on multiple columns using already familiar base functions. Here are some examples:
+
+1. DT[, lapply(.SD, fun), by = ..., .SDcols = ...] - applies fun to all columns specified in .SDcols while grouping by the columns specified in by.
+
+2. DT[, head(.SD, 2), by = ...] - return the first two rows for each group.
+
+3. DT[col > val, head(.SD, 1), by = ...] - combine i along with j and by.
