@@ -21,5 +21,5 @@ R基础学习-控制流、函数、apply族
 ###class7-Data visualization and ggplot2
 数据可视化及ggplot2入门
 
-###class8-Database
-数据库及R的数据库操作
+###class8-Introduction to Database
+数据库入门
