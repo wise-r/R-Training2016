@@ -1,7 +1,9 @@
 #RSQL
 #1.操作关系型数据库——以SQLite为例
+#安装包
 #install.packages("RSQLite")
 #载入RSQLite包
+library(DBI)
 library(RSQLite)
 #提供一个数据库驱动和数据库文件来建立连接：
 con <- dbConnect(SQLite( ), "data/example1.sqlite")
@@ -180,20 +182,17 @@ dbGetQuery(con,
 dbGetQuery(con,
            "select * from teacher")
 dbGetQuery(con,
-           "select * from course,teacher")
+           "select * from course,teacher")#笛卡尔乘积，出来的数据很多没有意义
 
 dbGetQuery(con,
            "select * from course,teacher where course.Teacher=teacher.ID")
 #使用join 也能达到相同的效果,但注意语法上的细微差别
 dbGetQuery(con,
            "select * from course join teacher on course.Teacher=teacher.ID")
-
+#可以对结果进行筛选
 dbGetQuery(con,
            "select course.ID as courseID,course.name as courseName,teacher.name as teacher from course,teacher 
-           where course.Teacher=teacher.ID")
-dbGetQuery(con,
-           "select course.ID as courseID,course.name as courseName,teacher.name as teacher from course,teacher 
-           where course.Teacher=teacher.ID")
+           where course.Teacher = teacher.ID")
 
 dbDisconnect(con)
 
