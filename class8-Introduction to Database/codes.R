@@ -5,9 +5,52 @@
 #载入RSQLite包
 library(DBI)
 library(RSQLite)
-#提供一个数据库驱动和数据库文件来建立连接：
-con <- dbConnect(SQLite( ), "data/example1.sqlite")
 
+#PART I
+#SQL数据定义
+#提供一个数据库驱动和数据库文件来建立连接：
+con <- dbConnect(SQLite(), "data/example1.sqlite")
+#数据库连接 con 是介于用户和系统中间的一层。我们可以创建一个连接，并且连接到关系型数据库，并通过这个连接实现查询、抽取及更新数据。后续的操作中一直使用该连接，直到连接被关闭。
+
+#使用SQL建表、定义相关约束条件
+createTable1sql <- "Create Table student(
+ID char(4) not null unique,
+name char(50) not null,
+sex char(1) not null,
+mobilePhone char(11),
+mail char(50),
+Constraint Csex check (sex In (\"F\",\"M\")),
+Constraint Cmail check (\"mail\" Like \"%@%.%\"),
+Primary key (ID));"
+
+createTable2sql <- "Create Table teacher(ID char(4) not null unique,
+name char(50) not null,sex char(1) not null,mobilePhone char(11),mail char(50),
+Constraint Csex check (sex In (\"F\",\"M\")),
+Constraint Cmail check (\"mail\" Like \"%@%.%\"),
+Primary key (ID));"
+
+createTable3sql <- "Create Table course(ID char(4) not null unique,
+name char(50) not null,
+Teacher char(4),
+Primary key (ID),
+Foreign key (Teacher) references teacher(ID));"
+
+createTable4sql <- "Create Table courseSelect(courseID char(4) not null ,
+studentID char(4) not null,
+score double,
+Primary key (courseID,studentID),
+Foreign key (courseID) references course(ID),
+Foreign key (studentID) references student(ID));"
+
+#将SQL语句传到相应数据库文件
+dbSendStatement(con,createTable1sql)
+dbSendStatement(con,createTable2sql)
+dbSendStatement(con,createTable3sql)
+dbSendStatement(con,createTable4sql)
+
+#PART II
+con <- dbConnect(SQLite( ), "data/example1.sqlite")
+#DBI自带函数
 dbListTables(con)
 dbExistsTable(con, "student")
 dbExistsTable(con, "students")
@@ -21,6 +64,7 @@ dbListTables(con)
 
 dbDisconnect(con)
 
+#PART III
 #用SQL查询
 con <- dbConnect(SQLite( ), "data/example2.sqlite")
 data("diamonds", package ="ggplot2")
@@ -32,6 +76,7 @@ data("diamonds", package ="ggplot2")
 db_diamonds <- dbGetQuery(con,
                           "select * from diamonds")
 head(db_diamonds, 3)
+head(diamonds,3)
 
 #选择部分字段
 db_diamonds <- dbGetQuery(con,
@@ -99,8 +144,8 @@ some_price_diamonds <- dbGetQuery(con,
 
 #like:筛选具有某种模式的字段；通配符：用于代表任意字符
 
-#  _ :代表任意*一个*字符
-#  % ：代表任意*多个*字符
+#  _ :代表任意一个字符
+#  % ：代表任意多个字符
 # [charlist]:字符列中的任何单一字符
 # [^charlist]或者[!charlist]:不在字符列中的任何单一字符
 
@@ -110,6 +155,8 @@ good_cut_diamonds <- dbGetQuery(con,
                                 "select carat, cut, color, price 
                                 from diamonds           
                                 where cut like '%Good' ")
+
+head(good_cut_diamonds)
 nrow(good_cut_diamonds) /nrow(diamonds)
 
 #order by：按指定字段重新排列数据
@@ -133,6 +180,7 @@ dense_diamonds <- dbGetQuery(con,
                              "select carat, price, x * y * z as size 
                              from diamonds
                              order by carat /size desc")
+head(dense_diamonds)
 #where 和 order by 便可得到一个排序的子集结果
 head(dbGetQuery(con,
                 "select carat, price from diamonds
@@ -152,6 +200,15 @@ dbGetQuery(con,
            from diamonds
            group by clarity
            order by avg_price desc")
+
+# having：剔除不符合条件的分组，总是跟在 group 子句后，不可以单独使用
+dbGetQuery(con,
+           "select clarity, avg(price) as avg_price
+           from diamonds
+           group by clarity
+           having avg(price)>4000
+           order by avg_price desc")
+
 
 #还可以在组内同时进行多个运算
 dbGetQuery(con,
@@ -173,7 +230,6 @@ dbGetQuery(con,
 
 dbDisconnect(con)
 
-
 #多表查询
 con <- dbConnect(SQLite( ), "data/example1.sqlite")
 
@@ -194,7 +250,12 @@ dbGetQuery(con,
            "select course.ID as courseID,course.name as courseName,teacher.name as teacher from course,teacher 
            where course.Teacher = teacher.ID")
 
+#数据插入
+
+
+
 dbDisconnect(con)
+
 
 ##分块提取查询结果
 con <- dbConnect(SQLite( ), "data/example2.sqlite")
@@ -207,3 +268,4 @@ while(!dbHasCompleted(res)){
 }
 dbClearResult(res)
 dbDisconnect(con)
+
