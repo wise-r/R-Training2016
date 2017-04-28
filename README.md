@@ -1,4 +1,4 @@
-﻿## 2016 - 2017 学年 R 课程
+## 2016 - 2017 学年 R 课程
 
 ###class1-Rstudio & Rmarkdown
 R入门：Rstudio介绍及Rmarkdown写文档
@@ -23,3 +23,6 @@ R基础学习-控制流、函数、apply族
 
 ###class8-Introduction to Database
 数据库入门
+
+###class9-Introduction to Web Scraping and Text Mining
+爬虫及文本挖掘入门
