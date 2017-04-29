@@ -1,0 +1,1356 @@
+---
+title: "爬虫及文本挖掘"
+author: "胡帆"
+date: "2017年4月27日"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+<ul>
+<li><a href="#c1">1. 爬虫</a>
+<ul>
+<li><a href="#c1.1">1.1 HTTP 协议介绍</a>
+<ul>
+<li><a href="#c1.1.1">1.1.1 URL 介绍</a></li>
+<li><a href="#c1.1.2">1.1.2 HTTP 消息</a></li>
+<li><a href="#c1.1.3">1.1.3 请求方法（method）</a></li>
+<li><a href="#c1.1.4">1.1.4 爬虫利器</a></li></ul></li>
+<li><a href="#c1.2">1.2 HTML简介</a>
+<ul>
+<li><a href="#c1.2.1">1.2.1 HTML 结构简介</a></li>
+<li><a href="#c1.2.2">1.2.2 JSON 与 XML 简介</a></li></ul></li>
+<li><a href="#c1.3">1.3 Rvest 包入门</a>
+<ul>
+<li><a href="#c1.3.1">1.3.1 常用函数及标签定位方法</a></li>
+<li><a href="#c1.3.2">1.3.2 CSS 方法提取节点</a></li>
+<li><a href="#c1.3.3">1.3.3 XPath 方法提取节点</a></li>
+<li><a href="#rvestanli">案例</a></li></ul></li>
+<li><a href="#c1.4">1.4 httr包抓取动态网页</a>
+<ul>
+<li><a href="#c1.4.1">1.4.1 httr包简介</a></li>
+<li><a href="#httranli">案例</a></li></ul></li></ul></li>
+<li><a href="#c2">2. 中文分词</a>
+<ul>
+<li><a href="#c2.1">2.1 jiebaR 库简介</a></li>
+<li><a href="#c2.2">2.2 添加停止词词库</a></li></ul></li>
+<li><a href="#c3">3. 文本挖掘入门</a>
+<ul>
+<li><a href="#c3.1">3.1 构建语料库</a>
+<ul>
+<li><a href="#c3.1.1">3.1.1 构造单个 csv 文件的语料库</a></li>
+<li><a href="#c3.1.2">3.1.2 构造单个非 csv 文件的语料库</a></li>
+<li><a href="#c3.1.3">3.1.3 构造多个文档的语料库</a></li></ul></li>
+<li><a href="#c3.2">3.2 清洗数据</a></li>
+<li><a href="#c3.3">3.3 使用 jiebaR 对语料库分词</a></li>
+<li><a href="#c3.4">3.4 构造 DTM 或者 TDM</a></li>
+<li><a href="#c3.5">3.5 词云制作</a>
+<ul>
+<li><a href="#c3.5.1">3.5.1 按词频对词语进行排序</a></li>
+<li><a href="#c3.5.2">3.5.2 绘制词云</a></li></ul></li></ul></li></ul>
+
+<br>
+
+
+>在课程开始前，希望大家的电脑上已经安装了[火狐浏览器](http://www.firefox.com.cn/)或者谷歌浏览器[chrome](http://www.baidu.com/link?url=Uinb_ahhfpq1DmBRXiRxPlwNtNvLBH0NHyyy425DQ38bPDdi_wbZiTf5E6UNjZB5&wd=&eqid=bc164beb000300810000000659037b6e)!
+
+```{r, warning=FALSE}
+library(stringr)
+library(rvest)
+library(httr)
+library(jiebaR)
+library(tm)
+library(wordcloud2)
+library(ggplot2)
+```
+
+<div style="color:#F38181;"><h1><a name="c1">1. 爬虫</a></h1></div>
+
+
+爬虫，在这里指从网页上抓取数据。
+
+学会爬取网页要经过以下几个步骤：
+
+1. 了解网页结构基本知识
+
+2. 学会使用 rvest 包抓取静态网页
+
+3. 学会使用 httr 包抓取动态加载的网页
+
+4. 清理抓下来的数据
+
+5. 存入本地 csv 文件或数据库中
+
+
+<div style="color:#F38181;"><h2><a name="c1.1">1.1 HTTP 协议介绍</a></h2></div>
+
+
+HTTP全称是 Hyper Text Transfer Protocol，即超文本传输**协议**，但是HTTP并不仅仅用来传输超文本的标准，它还可以被用来向服务器请求几乎任何类型的资源。
+
+<br><div align="center"><img src="C:/Users/hufan/Documents/研一下/WiseRClub/http协议.jpg"></div><br><br>
+
+
+ 1. 用户在浏览器里输入想要到达的 URL
+ 
+ 2. 浏览器起到 http 客户端的作用，用来发起请求
+ 
+ 3. http 客户端在 DNS 域名系统中查找机器能读懂的 URL 对应的 IP 地址
+ 
+ 4. 通过 TCP/IP 协议，http 客户端连接到 http 服务器
+ 
+ 5. http 服务器响应请求，返回用户所需要的文件
+ 
+ 6. 所有请求文件发送完毕后，服务器会关闭与 http 客户端的连接
+ 
+
+<br>
+<div style="color:#F38181;"><h3><a name="c1.1.1">1.1.1 URL 介绍</a></h3></div>
+
+
+
+全称是 Uniform Resource Locators，翻译过来是统一资源定位符，anyway，我们不用管它的官方翻译是什么意思，它其实就是我们日常说的网址。我们只需要了解它的格式:
+
+        scheme://hostname:port/path?querystring#fragment
+        
+对应过来是：
+ 
+ - scheme：传输协议，对应 HTTP、HTTPS、FTP、SMTP 等
+ 
+ - hostname：主机名，是我们想要发送请求的目的地，它是服务器的名字。比如`www.google.com`,也可以是DNS中查找到的对应IP地址。
+ 
+ - port：HTTP 缺省端口为 `80`，用来传输控制协议（TCP）；HTTP 缺省端口是`443`，建立到服务器的 TCP 连接。一般浏览器会默认使用缺省端口`80`，所以 URL 中这一项**可以省略**。
+ 
+ - path：这是你要请求获取的资源所在服务器的位置。类似于电脑本地某个文件的文件路径。例如 `https://github.com/hadley/rvest`中的 `/hadley/rvest` 就是资源所在服务器的路径。
+ 
+ - ?querystring：当你有查询需求时，这用来告诉服务器你的查询内容是什么。其形式是：`?name=value`，当有多个查询语句时，会使用`&`隔开。例如`https://github.com/search?q=httr`里的`?q=httr`，其表明你请求查询有关于`httr`的内容。
+        
+        
+        
+- reference:
+
+   [统一资源定位符](https://zh.wikipedia.org/wiki/%E7%BB%9F%E4%B8%80%E8%B5%84%E6%BA%90%E5%AE%9A%E4%BD%8D%E7%AC%A6)
+
+<br>
+<div style="color:#F38181;"><h3><a name="c1.1.2">1.1.2 HTTP 消息</a></h3></div>
+
+
+HTTP 消息，指的是浏览器的请求消息，以及服务器端响应的消息。Anyway，它由三部分组成：
+
+ 1. start line（起始行）
+ 
+ 2. headers（标头）
+ 
+ 3. body（正文）
+ 
+ <br>
+ <div style="color:#F38181;"><h4>1.1.2.1 起始行（start line）</h4></div>
+
+
+- 请求模式（request mode）下的格式如下：
+
+<div align="center">请求方法  /请求资源   浏览器能处理的HTTP最高版本</div>
+<br/>
+
+例如：`GET /index.html HTTP/1.1`
+
+表示发送请求的方式是`GET`，请求的服务器资源是`index.html`，浏览器能处理的HTTP最高版本是`1.1`。
+
+<br>
+
+- 响应模式下（response mode）下的起始行格式如下：
+
+<div align="center">服务器能处理的HTTP最高版本  状态码  关于响应状态的人话解释</div>
+<br/>
+例如：`HTTP/1.1 200 OK`
+
+表示服务器能处理的HTTP最高版本是`1.1`，状态码（[status code](https://zh.wikipedia.org/wiki/HTTP%E7%8A%B6%E6%80%81%E7%A0%81)）是`200`，状态码`2XX`表示响应成功，后面跟的`OK`，也是对状态码的解释。
+
+**Note**：状态码是用来表示HTTP响应状态的3位代码，其范围为：100~599。所有状态码的第一个数字代表了响应的 5 种状态之一。常见的状态码有： 200，表示响应成功，以及众所周知的 404，表示 Page Not Found...
+
+在响应的起始行中，我们最关心的其实就是状态码：
+
+|状态码|含义|
+|---|--------|
+|1xx|一般都不会出现|
+|2xx|表示请求成功|
+|3xx|表示重定向|
+|4xx|表示请求错误|
+|5xx|表示服务器错误|
+
+
+<br>
+<div style="color:#F38181;"><h4>1.1.2.2 标头（header）</h4></div>
+
+
+
+- 请求状态下的标头
+
+有时候为了帮助服务器理解你的请求，我们需要给服务器端提供一些额外的信息，这时候我们就需要headers，即标头，可以用来指定我们希望服务器返回资源的语言类型及数据类型（文本类型或二进制类型）。这样服务器端通过读取标头信息，就能返回我们想要的正确形式的内容。
+
+- 响应状态下的标头
+
+我们主要关心标头里的cookies，这里的cookies是服务器端在返回响应数据时放在响应标头里的一些数据。
+
+- cookie的含义及其在响应标头里的作用
+
+简单来说，cookie是用来进行用户身份识别的一个工具，通俗地说，我得知道你在发送第二次请求时，还是不是上次那个用户。
+
+服务器端为了更好地了解发出请求的用户（比如，方便以后为用户提供个性化定制服务），会设定一个唯一的标识ID和其他的一些数据，通过存放在响应标头中，返回给用户，随后用户端会把标头里的cookie存放在本地的一个文本文件中。
+
+【Note：正因为以上原理，本地cookies中会存放许多cookie，他们是不同服务器端发响应后存放在用户端的cookie。】
+
+等到下次用户发送请求时，**用户端（浏览器）**会自动搜索本地保存的cookies，看其中是否有属于该服务器的cookie，有则把对应的cookie加入到请求中。
+
+举个例子，你登录了一个网站，并发送了一次你的请求，当你发送第二次请求时，你并没有被要求再次登录，这是为什么？就是因为第一次请求得到响应后，服务器端发给你的cookies在起作用。
+
+
+- cookie的分类
+
+    1. Session cookie：会话cookie，在你关闭浏览器的时候，cookie也会被随之删除
+    
+    2. persistent cookie：持久性cookie，设定cookie的生命期，设置生命期有两个参数：max-age和expires，分别表示保存cookie的最长时间、终止日期。没有到生命终点，cookie便会一直存在，无论你是否关闭浏览器。
+    
+    3. third-party cookie：第三方cookie，日常浏览网站时出现的页面广告便是第三方cookie作祟，广告商服务器端通过收集你的信息，定制个性化广告，在你浏览其他网站时，将广告嵌入该网站，于是就出现了你十分厌恶的广告，浏览的网站只能说：“这个锅我不背啊啊啊啊”。
+    
+    你可能会因此对cookie的应用产生怀疑，虽然它会偷看你浏览的内容，但是不管怎么说，cookie被设计出来的初衷是好的啊！
+
+
+<div style="color:#F38181;"><h4>1.1.2.3 正文（body）</h4></div>
+
+
+- 请求状态下的正文
+
+请求状态下的正文可以省略。
+
+- 响应状态下的正文
+
+响应状态下传回的正文，包含了用户请求的数据资源。**我们使用 httr 包动态抓取网页时，就是要得到它。**
+
+
+<div style="color:#F38181;"><h3><a name="c1.1.3">1.1.3 请求方法（method）</a></h3></div>
+
+
+- GET 方法和 POST 方法的区别
+
+举例来说：
+
+假如我现在有一句话想告诉你，我可以直接在大庭广众下写出来给你看，这是GET方法。
+
+但某些情况下，如果我觉得这句话很私密，不想直接在大庭广众下写出来给你看，那么我会把它写在一个只有你能打开的日记本里，然后我把日记本交给你，让你来打开日记本，看到我写的那句话。这就是POST方法。
+更形象地说，POST 方法发送请求的过程，就相当于我把请求数据放在 CSV 文件里，而你需要用 EXCEL 来解析这个 CSV 文件，才能获取我的请求数据。
+
+[如果你想好好了解HTTP，戳这里](http://www.liaoxuefeng.com/wiki/001374738125095c955c1e6d8bb493182103fac9270762a000/001386832653051fd44e44e4f9e4ed08f3e5a5ab550358d000)
+
+
+<br>
+<div style="color:#F38181;"><h3><a name="c1.1.4">1.1.4 爬虫利器</a></h3></div>
+
+
+
+- chrome  ->  右键  ->  选择`检查` (inspector) ->  进入 chrome Web Development tools 谷歌开发者工具
+
+        + 关注`Elements`面板：
+   
+   <br>
+   <div align="center"><img src="C:/Users/hufan/Documents/研一下/WiseRClub/chrome1.jpg"></div>
+<br>
+   
+        + 关注`Network`面板
+   
+   <br>
+   <div align="center"><img src="C:/Users/hufan/Documents/研一下/WiseRClub/chrome2.jpg"></div>
+<br>
+
+- firefox  ->  右键  ->  选择`查看元素` 
+   
+        + 关注`查看器`面板:
+ 
+ <br>  
+<div align="center"><img src="C:/Users/hufan/Documents/研一下/WiseRClub/firefox1.jpg"></div>
+<br>
+
+        + 关注`网络`面板：
+   
+   <br>
+<div align="center"><img src="C:/Users/hufan/Documents/研一下/WiseRClub/firefox2.jpg"></div>
+<br>
+
+- [SelectorGadget](http://selectorgadget.com/) 自动帮你寻找定位标签的最优路径
+
+   <br>
+<div align="center"><img src="C:/Users/hufan/Documents/研一下/WiseRClub/selectorGadget.jpg"></div>
+<br>
+
+<div style="color:#F38181;"><h2><a name="c1.2">1.2 HTML简介</a></h2></div>
+
+
+<br>
+<div style="color:#F38181;"><h3><a name="c1.2.1">1.2.1 HTML结构简介</a></h3></div>
+
+
+严格按照预定义标签来构造 HTML 文件，且必须严格按照下面的框架构造 HTML 文件：
+
+    <html>
+        <head>
+        </head>
+        <body>
+        </body>
+    </html>
+    
+上面的每一个标签都有一个起始标签`<tag>`，以及闭合标签`</tag>`。一般的HTML标签都有起始标签和闭合标签，但也有例外，比如存放图片的标签`<img>`、断行标签`<br>`，这两个就没有闭合标签。
+
+下面我们以知乎中关于“[娜塔莉·波特曼到底有多优秀？](https://www.zhihu.com/question/30886146)”这个问题为来源链接，为大家讲解在爬虫中，我们最关心的标签。
+
+我们在爬虫时，比较关心的标签有：
+
+- 头标签`<head>`中的`<meta>`标签，它存放了`charset`属性，该属性指明网页文本内容的编码格式，比如下面的标签中就指定了网页编码是`utf-8`：
+
+        <meta charset="utf-8" data-reactid="3">
+
+- 段落标签`<p>`存放的文本内容，比如`<p>我是存放的文本内容</p>`。
+
+- 图片标签`<img>`中的`src`属性，`src`属性指明了图片的地址，抓取到该地址后，将图片地址直接传入XML包里的`download.file()`函数可以直接下载图片到本地。看看下面这个`<img>`标签：
+
+        <img src="https://pic3.zhimg.com/36f7d501096b40d9896a3b30dfe85776_b.jpg">
+
+Note：大家可以复制`src`的属性值，这是图片的所在地址，复制到浏览器中后，可以查看该图片：
+
+
+<br><div align="center"><img src="C:/Users/hufan/Documents/研一下/WiseRClub/img.jpg"></div><br>
+
+
+- 锚标签`<a>`中的`href`属性，`href`属性指明了对应文本内容的链接，**这正是我们一般要爬取的链接**。锚标签，顾名思义，就是有着索引定位的意思。
+
+        <a class="Button Button--plain" target="_blank" type="button" href="/question/22545664">如何评价电影《美国骗局》？</a>
+
+- 表单标签`<form>`，后面我们将利用 rvest 包创建会话，填写这个表单，实现表单穿越。在精简过知乎的登录表单后，下面的形式应该可以实现简单的表单设计：
+
+        <form method="POST">
+                <input name="account" class="account" aria-label="手机号或邮箱" placeholder="手机号或邮箱" type="text">
+                <input name="password" aria-label="密码" placeholder="密码"  type="password">
+                <button class="submit blue-button">登录</button>
+        </form>
+
+
+效果如图：
+
+
+<br><div align="center"><img src="C:/Users/hufan/Documents/研一下/WiseRClub/form.jpg"></div><br>
+
+
+
+- 表格标签`<table>`，这个标签里通常还嵌套了表格的表头标签`<th>`，表格的行标签`<tr>`。而`<tr>`标签里又嵌套了单元格数据标签`<td>`，`<td>`标签存放了表格的单元格数据。在 HTML 里的格式为：
+
+        <table>
+                <th>我是表头的第一个元素1</th>
+                <th>我是表头的第二个元素2</th>
+                <tr>
+                    <td>我是第一行的第一个元素1.1</td>
+                    <td>我是第一行的第二个元素1.2</td>
+                </tr>
+                <tr>
+                    <td>我是第二行的第一个元素2.1</td>
+                    <td>我是第二行的第二个元素2.2</td>
+                </tr>
+        </table>
+        
+**Note**：大家可以把上面的代码嵌套入严格的 HTML 框架中，放入记事本或者 Notepad++ 中，保存后用浏览器打开，就能看出是不是一个表格了：
+
+
+<br><div align="center"><img src="C:/Users/hufan/Documents/研一下/WiseRClub/table2.jpg"></div><br>
+
+
+
+- 列表标签`<ul>`（无序列表）以及`<ol>`（有序列表）,这些列表标签里又存放了列数据：
+
+         
+         <ul>
+            <li>1</li>
+            <li>2</li>
+            <li>3</li>
+         </ul>
+
+
+效果如图：
+
+<br><div align="center"><img src="C:/Users/hufan/Documents/研一下/WiseRClub/ul.jpg"></div><br>
+
+
+无序列表标签`<ol>`与`<ul>`的表示方法差不多，只需要将上面的`<ul>`，`</ul>`标签变成`<ol>`，`</ol>`这两个标签，其他的标签保持不变，就会得到下面的效果：
+
+
+<br><div align="center"><img src="C:/Users/hufan/Documents/研一下/WiseRClub/ol.jpg"></div><br>
+
+
+- 描述列表标签`<dl>`（descriptive list），`<dl>`中嵌套了关键词标签`<dt>`以及标签`<dd>`。`<dt>`用来存储描述列表的关键词；`<dd>`标签用来存放描述对应关键词的内容，其形式为：
+
+        <dl>
+           <dt>关键词1</dt>
+           <dd>1的描述内容</dd>
+           <dt>关键词2</dt>
+           <dd>2的描述内容</dd>
+        </dl>
+
+
+
+<div align="center"><img src="C:/Users/hufan/Documents/研一下/WiseRClub/dl.jpg"></div>
+
+
+其实描述列表标签的效果就相当于 RMarkdown 中的这种形式：
+
+- 你好
+
+    + 世界！
+
+- I'm fine
+
+    + Thank you!
+
+<br>
+
+- 如何在 firefox 或 chrome 中**定位节点**：
+
+
+前面已经说明过如何在 firefox 或 chrome 中<a href="#c1.1.4">开启爬虫利器</a>，现在来讲下怎么通过这些利器定位节点：
+
+1. 切换到 chrome 的`Elements`面板或者 firefox 的`查看器`面板
+
+2. 选中面板左上角的箭头图标：
+
+<br>
+<div align="center"><img src="C:/Users/hufan/Documents/研一下/WiseRClub/arrow.jpg"></div>
+<br>
+
+3. 选中后，你移动鼠标，会发现光标所在之处，其背景就会变蓝，这时你只需要将光标悬放在你想要查找的内容上，然后查看`Elements`面板或者`查看器`面板，会发现这些工具已经帮你定位好标签所在节点：
+
+<br>
+<div align="center"><img src="C:/Users/hufan/Documents/研一下/WiseRClub/arrow2.jpg"></div>
+</br>
+
+<div style="color:#F38181;"><h3><a name="c1.2.2">1.2.2 JSON与XML简介</a></h3></div>
+
+<br>
+
+<div style="color:#F38181;"><h4>1.2.2.1 JSON格式</h4></div>
+
+JSON 与 XML 都属于数据格式，通常被用来存储数据以及进行数据交换。而 JSON 是当前最流行的格式之一，JSON 存储数据的格式如下：
+
+
+<br><div align="center"><img src="C:/Users/hufan/Documents/研一下/WiseRClub/json2.jpg"></div><br>
+
+
+它在 HTTP 响应中是如下格式：
+
+
+<br><div align="center"><img src="C:/Users/hufan/Documents/研一下/WiseRClub/json.jpg"></div><br>
+
+
+实际上 JSON 就是用键值对来存储数据。键值对，英文名称是`key:value`，就相当于`key=value`。
+
+<br><div style="color:#F38181;"><h4>1.2.2.2 XML格式</h4></div>
+
+XML 和 HTML 长得很像，但是与 HTML 不同的是，XML 没有预定义的标签，即没有`<div>`、`<p>`、`<ul>`等预定义标签，但你可以自定义标签，你可以定义为`<叫姐姐 听话="有糖吃">`、`<叫阿姨 不听话="好气哦，还是要保持微笑">`。XML用标签内容来存储数据。
+
+
+<br>
+<div style="color:#F38181;"><h2><a name="c1.3">1.3 Rvest 包入门</a></h2></div>
+
+
+
+可能有同学已经使用过`Rcurl`包，它是一个强大的爬虫包，但是包里面的函数不是很容易记忆。rvest 包的函数基本看过一遍就能记住，虽然它相当于 Rcurl 的轻量级爬虫包，但是已经足够我们爬取静态网页等大部分爬取工作，据 Hadley 大神说，rvest 包的开发，是受到了 Python 的著名爬虫库`requests`的启发。
+
+<br>
+<div style="color:#F38181;"><h3><a name="c1.3.1">1.3.1 常用函数及标签定位方法</a></h3></div>
+
+
+```{r}
+#install.packages("rvest")
+library(rvest)
+single_table_page <- read_html("./case/single-table.html")
+```
+
+- Rvest 包中常用函数一览：
+
+| 函数|作用|
+|------------------------|-------------------------------------------------------------|
+|`read_html()` |读取 html 页面|
+|`html_nodes()` |提取所有符合条件的节点|
+|`html_node()` |返回一个变量长度相等的list，相当于对`html_nodes()`取`[[1]]`操作|
+|`html_table()`|获取 `table` 标签中的表格,默认参数`trim=T`,设置`header=T`可以包含表头，返回数据框|
+|`html_text()` |提前标签包含的文本,令参数`trim=T`,可以去除首尾的空格|
+|`html_attrs(nodes)`|提取指定节点所有属性及其对应的属性值，返回list|
+|`html_attr(nodes,attr)`|提取节点某个属性的属性值|
+|`html_children()`|提取某个节点的孩子节点|
+|`html_session()`|创建会话|
+
+
+- css 选择器与 xpath 用法对比
+
+css 选择器和 xpath 方法都是用来定位 DOM 树的标签，只不过两者的定位表示形式上存在一些差别：
+
+|目标|匹配节点|CSS 3|XPath|
+|---------------|--------|---------------|-------------------------------------|
+|所有节点| `~` |`*`|`//*`|
+|查找一级、二级、三级标题节点|`<h1>`,`<h2>`,`<h3>`|`h1`,`h2`,`h3`|`//h1`,`//h2`,`//h3`|
+|所有的P节点 |`<p>`|`p` |`//p`|
+|p节点的所有子节点|`<p>`标签下的所有节点 |`p > *` |`//p/*`|
+|查找所有包含attr属性的li标签|`<li attr="~">`|`li[attr]`|`li[@attr]`|
+|查找所有attr值为value的li标签|`<li attr="value">`|`li[attr=value]`|`//li[@attr='value']`|
+|查找id值为item的所有div节点|`<div id="item">`|`div#item`|`//div[@id='item']`|
+|查找class值中包含foo的所有标签|`<* class="foo blahblah">` |	`.foo`|`//*[contains(@class,'foo')]`|
+|第一个P节点|众多`<p>`中的第一个 `<p>` |`p:first-child` 	|`//p[1]`|
+|第n个P节点|众多`<p>`中的第n个 `<p>` |`p:nth-child` 	|`//p[n]`|
+|拥有子节点a的所有P节点|`<p><a></p>`|css无法实现|`//p[a]`|
+|查找文本内容是“Web Scraping”的p节点|`<p>Web Scraping</p>`|css无法实现|`//p[text()="Web Scraping"]`|
+
+
+**Note**：DOM指文档对象模型，是一种可查询的数据对象，说人话就是它是有层次、有结构的，你可以对它执行定位标签操作。
+
+
+<br>
+<div style="color:#F38181;"><h3><a name="c1.3.2">1.3.2 CSS 方法提取节点</a></h3></div>
+
+
+```{r, eval=FALSE, include=TRUE}
+html_table(single_table_page)#提取url里的所有表格
+
+html_table(html_node(single_table_page,"table"))
+products_page <- read_html("./case/products.html")
+products_page %>% html_nodes(".product-list li .name") %>% html_text() 
+product_items <- products_page %>% html_nodes(".product-list li")
+products <- data.frame(name = product_itmes %>% 
+                               html_nodes(".name") %>% html_text(),
+                       price = product_items %>% html_nodes(".price") %>%
+                               html_text() %>%
+                               str_replace_all(pattern="\$",replacement="") %>%
+                               as.numeric(),
+                       stringsAsFactors = FALSE)
+```
+
+<br>
+<div style="color:#F38181;"><h3><a name="c1.3.3">1.3.3 XPath 方法提取节点</a></h3></div>
+
+
+```{r, eval=FALSE, warning=FALSE, include=TRUE}
+page <- read_html("./case/new-products.html")
+```
+
+在Xpath里，`//`表示在上一节点的所有后代节点中搜索该标签，`/`表示只在上一节点的孩子节点中搜索该标签
+
+```{r, eval=FALSE, include=TRUE}
+#查找所有p节点
+page %>% html_nodes(xpath="//p")
+
+#CSS's way
+page %>% html_nodes("p")
+```
+
+```{r, eval=FALSE, include=TRUE}
+# 找到所有具有class属性的li标签
+#xpath's way
+page %>% html_nodes(xpath="//li[@class]")
+
+#CSS's way
+page %>% html_nodes("li[class]")
+```
+
+
+```{r, eval=FALSE, include=TRUE}
+# 找到id=‘list’的div标签下的所有li标签
+#xparth's way
+page %>% html_nodes(xpath="//div[@id='list']/ul/li")
+
+#CSS's way
+page %>% html_nodes("div#list > ul > li")
+```
+
+查询后代节点既可以用xpath方法实现，也可以用css方法实现
+
+但查询前继节点，我们只能用xpath方法实现。
+```{r, eval=FALSE, include=TRUE}
+#查找包含p节点的所有div节点
+page %>% html_nodes(xpath="//div[p]")
+
+#查找所有class值为“info-value”，文本内容为“Good”的span节点
+page %>% html_nodes(xpath = "//span[@class='info-value' and text()='Good']")
+```
+
+<br>
+<div style="color:#F38181;"><h2><a name="rvestanli">案例</a></h2></div>
+
+<br>
+<br><div style="color:#D81159"><big><b>案例一：爬取包含所有 R 包的 CRAN 网页内容</b></big></div><br>
+
+- 抓取网页数据
+
+<div align="center"><img src="C:/Users/hufan/Documents/研一下/WiseRClub/table标签.jpg"></div>
+
+```{r}
+page <- read_html("https://cran.rstudio.com/web/packages/available_packages_by_name.html")
+
+#第一种方法
+#pkg_table <- page %>% html_table(fill=TRUE)  
+#class(pkg_table)
+# 返回list，这个list应该包含了网页中的所有table
+# 但因为整个网页就只有一个table，所以我们要找的表格就在第一个list中
+#View(pkg_table)
+
+#pkg_table <- pkg_table %>% as.data.frame()
+# 转化为数据框才能数据进行缺失值处理
+
+
+#第二种方法
+pkg_table <- page %>% html_node('table') %>% html_table(fill=TRUE) 
+class(pkg_table)
+#返回数据框
+# 由于原表格没有表头(没有<th>标签)，因此数据框使用默认的表头X1,X2代替
+# 使用fill=T，会自动填补行列中的缺失值，比如这里的第一行
+
+#View(pkg_table)
+```
+
+- 数据清理
+
+
+前面我们已经看到表格的第一行存在缺失值，那么我们接下来就要对表格进行数据清洗：
+```{r}
+# 删除缺失值
+pkg_table <- pkg_table[complete.cases(pkg_table),]
+
+# 定义表头
+colnames(pkg_table) <- c("name","title")
+head(pkg_table,3)
+```
+
+
+<br><div style="color:#D81159"><big><b>案例二：爬取 StackOverFlow 上有关于 R 的问题</b></big></div><br>
+<br>
+
+- 网页链接：http://stackoverflow.com/questions/tagged/r?page=1&sort=votes&pageSize=15
+
+- 抓取目标：给定起始页面以及爬取页数，要求得到每一个问题的标题、票数、回答数、查看数，并把这些问题的信息拼接成一个数据框：
+```{r, eval=FALSE, warning=FALSE, include=TRUE}
+
+
+QInSTF <- function(url,page){
+        # QInSTF denotes the relwvant info of R questions in the stackoverflow
+        # page denotes the number of question_page you want to search
+        require(rvest)
+        t <- data.frame()
+        for(i in 1:page){
+                i=1
+                u <- paste(url,"r?page=",as.character(i),"&sort=votes&pagesize=15",sep="")
+                #发现只是page值有变化，URL中的其他部分都没变。
+                #所以我们对网页拆分为字符串，然后再进行一个拼接
+                html <- read_html(u)
+                df <- list(title = html %>% html_nodes(xpath="//div[@class='summary']/h3") %>% html_text(),
+                           vote = html %>% html_nodes(".vote-count-post") %>% html_text() %>% as.numeric(),
+                           answer = html %>% html_nodes(xpath="//div[@class='stats']/div[2]/strong") %>% html_text() %>% as.numeric(),
+                           views = html %>% html_nodes(xpath="//div[@class='statscontainer']/div[3]") %>% html_attr("title") %>% str_extract_all(pattern="[\\d\\,]+") %>% str_replace_all(pattern="\\,+",replacement="") %>% as.numeric()
+                             )
+                t <- rbind(t,df)
+        }
+        return(t)
+}
+url <- "http://stackoverflow.com/questions/tagged/"
+df <- QInSTF(url,10)
+#View(df)
+```
+其实我们不需要写循环来完成这件事，用`lapply()`也可以完成这件事，只不过这时`lapply()`函数的第一个`x`参数应该是一个`1:page`的向量，这样就能把每一页 page 传入后面的`FUN`函数中，大家可以回去试试。
+
+
+实际上你也可以马上得到 Python 的相关问题，只需要将链接中的`r`改成`python`：
+```{r, eval=FALSE, include=TRUE}
+u <- paste(url,"python?page=",as.character(i),"&sort=votes&pagesize=15",sep="")
+```
+
+- 查找标签神器：SelectorGadget
+
+   人为地查找节点是比较麻烦的，那么下面我要说的神器就能大大提升我们的工作效率，给大家推荐一款自动搜寻最短路径的节点搜寻软件：[SelectorGadget](http://selectorgadget.com/)
+
+- 使用方法简要说明
+
+   1. 它虽然作为 chrome 的插件，但是用 firefox 的童鞋也不要灰心丧气，你只需要把 SelectorGadget 的指定链接（请参见 SelectorGadget 官网）拉入你的收藏夹，等到下次要查找节点的时候，点击收藏夹里的它，接下来的操作就和在 chrome 里一样。
+
+
+   2. 安装完毕后，先点击插件，然后选中你想要查找的网页内容，那么该内容会被标绿。整个页面可能也会出现标黄的内容，而这些标黄的部分表示的是为匹配同一节点的内容。重复点击某一标黄内容，该内容会继而被标红，这表示排除刚刚重复点击的内容。
+
+   <br>
+<div align="center"><img src="C:/Users/hufan/Documents/研一下/WiseRClub/selectorGadget.jpg"></div>
+<br>
+
+另外，Hadley大神为我们写好了该插件的应用案例，只需要在 R 中输入以下代码：
+
+```{r}
+#vignette("selectorgadget")
+```
+
+
+
+
+<br><div style="color:#D81159"><big><b>案例三：抓取百度百科的信息</b></big></div><br>
+
+- 抓取目标：抓取花儿与少年的百度百科中成员信息：
+
+- 抓取网页数据 
+```{r}
+url <- "http://baike.baidu.com/item/%E8%8A%B1%E5%84%BF%E4%B8%8E%E5%B0%91%E5%B9%B4/13572794"
+page <- read_html(url)
+tables <- page %>% html_nodes("table[log-set-param=table_view]") %>% html_table()
+length(tables)
+#View(tables[3])
+table <- tables[3]
+str(table)
+```
+
+- 数据清洗
+
+我们只需要对成员介绍这一列进行数据清理，整理成我们想要的这种形式：
+
+<div align="center"><img src="C:/Users/hufan/Documents/研一下/WiseRClub/想要的数据格式.jpg"></div>
+
+
+<br>
+
+1. 分割句子
+
+将成员介绍那一列的每一个元素，均分割成我们想要的句子形式：
+
+    姓名、代表作、个人描述
+   
+这三部分。
+
+```{r}
+t1 <- str_extract_all(string=table[[1]]$"成员介绍","[\\w[:punct:]]+")
+```
+
+
+2. 去除没有用的引用符号及其中的数字
+```{r}
+t2 <- lapply(t1,str_replace_all,pattern="[代表作：\\[\\d+\\]]",replacement="")
+#View(t2)
+
+#这里存在缺失值，有的只有三个元素，有的是四个元素
+#观察一下，发现多出来的那个元素是空元素
+#所以我们还需要进行去除空元素处理
+```
+
+3. 去除空元素
+```{r}
+t3 <- lapply(t2,function(x) t(x[x!=""])) 
+str(t3)
+```
+必须指出这里对`x`作的很重要的一点转化，列表中的列向量必须转化为**行向量**，才能在第5步中，使每一条成员信息都按行正确地拼接，否则，它会变成这样：
+
+<div align="center"><img src="C:/Users/hufan/Documents/研一下/WiseRClub/错误的格式.jpg"></div>
+<br>
+
+4. 将列表格式转化为数据框格式，便于下一步的拼接
+
+<br>
+要使用到`plyr`包里的`rbind.fill()`函数，这个函数只能接受数据框，可以对维度不一致的数据框作拼接处理，缺失元素以`NA`填充：
+
+```{r}
+library(plyr)
+t4 <- lapply(t3,as.data.frame)
+dat <- Reduce(rbind.fill,t4)
+names(dat) <- c("姓名","职业","代表作","个人描述")
+```
+
+
+5. 将转换完的数据与原来的`参与季度`那一列进行一个拼接。
+```{r}
+dat$"参与季度" <- table[[1]]$"参与季度"
+#View(dat)
+```
+
+
+<br><div style="color:#D81159"><big><b>案例四：穿越表单</b></big></div><br>
+
+
+我们需要创建一个会话窗口，与服务器端沟通。会话窗口的作用在于，服务器端认为你是活跃着的用户，用户端会自动跟踪 cookie，有了服务器端传回来的 cookie，这样就能保持请求不被拒绝。
+
+换句话说，有了会话，服务器端会把你当成人类，而不是爬虫。
+
+利用`html_session()`创建会话，其返回的结果和之前`read_html()`的返回结果差不多，都包含了 html 网页内容，因此我们可以直接在`html_session()`返回结果上执行查找结点等操作，当然，有了会话，我们还可以实现页面的跳转。
+
+- 穿越学校网络教学平台的表单
+```{r, warning=FALSE}
+formurl <- "http://open.xmu.edu.cn/oauth2/authorize?client_id=1010&response_type=code"
+session <- html_session(formurl) #创建会话
+form <- html_form(session) #得到网页内的所有表单，以list形式返回
+#str(form)
+form <- form[[1]] #提取我们想要的表单
+UserName <- "15420161152145" #这里填写你自己的学号
+Password <- "26644X" #这里把password替换成你自己的密码
+form <- set_values(form,'UserName'=UserName,'Password'=Password) #填写表单内容
+out_url <- submit_form(session,form,submit=NULL) #在会话中提交表单，实现表单穿越
+
+#submit=NULL是默认设置，表明默认使用表单里的第一个提交按钮完成提交。
+#将提交按钮的名称传递给参数submit，这样你就可以选择表单的提交按钮。
+
+out_url # “https://l.xmu.edu.cn/my/”是登录教学平台后的URL，这说明我们已经成功登录网站！
+
+class(out_url) #这里返回的out_url仍然是一个session会话
+
+#我现在要在我的课程列表里搜寻“Advanced Econometrics”这门课
+
+#?follow_link 
+
+#follow_link(x,i,css,xpath) #follow_link会按参数i中的要求，寻找当前会话中的链接，并将会话的URL改成该链接
+#如果参数i给定的是字符类型，则会去当前会话中自动寻找包含该字符的链接，一旦找到，立即停止，不会继续搜寻其它包含该字符的链接
+
+session2 <- follow_link(out_url,'Advanced Econometrics')
+session2
+course.info <- session2 %>% html_nodes("ul.section") %>% html_text() #爬取属性哦日section的ul节点，获取其下面列表的所有文本内容
+
+cat(course.info[2]) #提取出来的文本也表示我们成功提交了表单
+```
+
+<div align="center"><img src="C:/Users/hufan/Documents/研一下/WiseRClub/through.jpg"></div>
+
+<br>
+
+<div style="color:#F38181;"><h2><a name="c1.4">1.4 httr 包抓取动态网页</a></h2></div>
+
+
+<div style="color:#F38181;"><h3><a name="c1.4.1">1.4.1 httr 包简介</a></h3></div>
+
+
+rvest 包虽然非常简单，但是它在抓取动态网页方面却显得不足，特别是对异步加载（AJAX）的网页，所以我们需要 Hadley 大神的另一个包 —— **httr**。
+
+Q：什么是异步加载：
+
+A：举个例子，有一条长微博，你点击了”展开全文“，但页面却没有发生跳转，网址也没有发生变化，这就是异步加载。动态网页如今基本都使用了异步加载技术而要观察一个网站有没有使用AJAX技术，只需要在网络（NTEWORK）面板中选中`XHR`，然后刷新网页，这时观察面板有没有出现`XHR`文件，有则表明使用了AJAX技术。
+
+这是点击“展开全文”前，右侧框没有出现`xhr`文件：
+<br>
+<br>
+<div align="center"><img src="C:/Users/hufan/Documents/研一下/WiseRClub/ajax1.jpg"></div>
+<br><br>
+这是点击“展开原文”后，右侧框出现了一个成功请求的`xhr`文件：
+<br>
+<br>
+<div align="center"><img src="C:/Users/hufan/Documents/研一下/WiseRClub/ajax2.jpg"></div>
+<br>
+所以微博很显然使用了AJAX技术。
+
+
+在 httr 包里，我们需要搞清楚的有两部分：
+
+- 请求
+
+- 响应
+
+<br>
+<div style="color:#F38181;"><h4>1.4.1.1 标头（header）</h4></div>
+
+
+
+
+在爬虫中比较重要**请求标头**内容是`user-agent`,`Host`,`Referer`,`cookies`。
+
+**响应标头**中较为重要的内容包括`content-type`,`content-encoding`,`set_cookies`,`location`。
+
+<br>
+<div style="color:#F38181;"><h4>1.4.1.2 请求方式</h4></div>
+
+
+请求方式包括`GET`,`POST`,`PUT`,`DELETE`,`PATCH`。常用的是`GET`,`POST`方法，因此本文仅对`GET`,`POST`这两种方法进行介绍。
+
+- **get 方法**
+
+`GET`方法中最重要的是`headers`标头部分。
+
+1. 在`GET`请求中增加查询键值对。实际其`URL`变成了：`https://www.zhihu.com/search?name1=val1&name2=val2`。
+```{r, include=TRUE}
+library(httr)
+r <- GET("https://www.zhihu.com/search?",
+         query=list(encode="utf-8",q="娜塔莉波特曼"),verbose()) #构造对知乎的查询请求
+#https://www.zhihu.com/search?encode="utf-8"&q="娜塔莉波特曼"
+
+#verbose()会跟踪请求及响应流程
+
+r$url 
+#发现结果中娜塔莉波特曼应该出现的位置变成了一堆乱码
+#这是因为编码的问题，但是服务器是能访问该url的，因此请大家忽略掉这个不同之处。
+```
+
+`r$url`会得到我们请求资源的 URL，copy 到浏览器,看看和我们设定的是否一样。
+
+<br>
+
+**Note**：构造查询请求时，我们会使用`GET`方法。从`HTTP`相关知识中，我们知道查询的格式其实就是键值对，在`Python`里我们可以使用字典，在`R`中，我们使用命名列表来实现我们要提交的格式设计。<br>
+
+2. 往请求标头里增加属性，我们使用`add_headers(name1=val1，name2=val2,...)`的形式。
+```{r, eval=FALSE, include=TRUE}
+r <- GET("https://www.zhihu.com/api/v4/banners/new_question_up?question_token=30886146",
+         add_headers(Accept="text/html",
+                     "user-agent"="Mozilla/5.0 (Windows NT 10.0; WOW64; rv:51.0) Gecko/20100101 Firefox/51.0"),verbose())
+
+
+
+#返回401状态码，Unauthorized!
+```
+
+<br>
+发现返回401状态码，这意味着请求失败，服务器因为`Unauthorized`拒绝了我们的请求！我们去找找看请求头里有没有授权码：
+
+<br>
+<div align="center"><img src="C:/Users/hufan/Documents/研一下/WiseRClub/auth.jpg"></div>
+<br>
+
+是有的！那么我们往请求头里添加`authorization`试试：
+```{r}
+authorization = "oauth c3cef7c66a1843f8b3a9e6a1e3160e20"
+
+r <- GET("https://www.zhihu.com//api/v4/banners/new_question_up?question_token=30886146",
+         add_headers(
+                     authorization=authorization
+                     ),verbose())
+```
+状态码200，请求成功！
+
+下面我们来介绍一种往请求中添加cookie的方法：
+
+
+3. 在请求头中伪造`cookie`。我们使用`set_cookies(name=val)`来伪造用于身份识别的`cookie`。
+  
+```{r, include=TRUE}
+r <- GET("https://www.zhihu.com/question/22063485",
+         add_headers(authorization=authorization),
+         set_cookies(
+                 "d_c0"="AEBC8bh7XwuPTn8DNZc4Bk7WRhfoJZGSGko=|1488166336",
+                 "_zap"="3f975569-f79c-4091-8435-1bbe559a949e"),verbose())
+#200 ok
+```
+
+   当然，你也可以直接把cookie中的所有内容用单引号`''`引用起来，然后放到`add_headers()`函数的`cookie`参数里。
+
+
+<br>
+  一般在网络请求中，我们会用`POST`方法来传递不想被人看到的信息，比如你的应户名、密码。不像`GET`中把信息显露无疑地摆放在`URL`中，`POST`方法把它的信息放在`body`中，随着请求传输到服务器端，让服务器端打开`body`，读取你的信息。下面我们就来介绍`POST`方法。
+  
+- **POST方法**
+
+  在POST方法中，这三个部分：`status_line`,`headers`,`body`，都比较重要。
+  
+  我们对`status_line`中的`status_code`最感兴趣，因为它反映了我们的请求是否被接受，不被接受的话，又是因为什么而拒绝我们的请求。
+  
+  上面我们已经定制了`GET`方法中的`headers`，当然，`POST`方法中也可以像`GET`中那样定制请求头，我就不重复了。在这里，主要讲解`POST`方法中怎么构造自己想要的`body`。
+  
+```{r, include=TRUE}
+url <- "http://httpbin.org/post"
+body <- list(a=1,b=2,c=3)
+r <- POST(url,body=body,encode="form",verbose())
+```
+**Note**：只有当`body`是**命名列表**时，我们才可以指定`encode`参数，并且`encode`参数的值又随`content-type`的值而有所不同，具体请`?POST`。
+
+
+<div style="color:#F38181;"><h2><a name="httranli">案例</a></h2></div>
+
+<br>
+<br><div style="color:#D81159"><big><b>案例一：使用httr包抓取薛之谦新歌《动物世界》评论</b></big></div><br>
+
+```{r}
+library(httr)
+#获取薛之谦《动物世界》的歌曲评论
+url = "http://music.163.com/weapi/v1/resource/comments/R_SO_4_468517654?csrf_token="
+#构造标头
+header <- c("application/x-www-form-urlencoded",
+            "gzip, deflate",
+            "http://music.163.com/",
+            "JSESSIONID-WYYY=fCenT4%2BZen2li%2BVkwqfyaY%5CkKqEkEQ4fyeSyaefGfaXiSAVAVdA6PjNVYr5aJ0YXMGxm%5CA7%2Beu4hzggnVBxn0FimYlYUZjWMffk%5CIaev58NoSZsX70r70%5Cvgd7%2B9zKCgQxAQoOfCx%2F%2Fu%2BR26w4xzNbVQFPw1Xfq4DoH2i5xeaBsio9vs%3A1491197296757; _iuqxldmzr_=32; _ntes_nnid=f374e8d9fd15170c19f5f75186cfbb09,1486989651115; _ntes_nuid=f374e8d9fd15170c19f5f75186cfbb09; __utma=94650624.720052715.1487140369.1491183317.1491195035.3; __utmz=94650624.1491183317.2.2.utmcsr=bing.com|utmccn=(referral)|utmcmd=referral|utmcct=/; __oc_uuid=4bb1c5e0-f768-11e6-9bed-cb1b9907a69b; __utma=187553192.582371522.1487593809.1490937323.1490949328.4; __utmz=187553192.1488870253.2.2.utmcsr=baidu|utmccn=(organic)|utmcmd=organic; mail_psc_fingerprint=e0e1c03421a56e6f74684197b00ff225; P_INFO=hufan2012muc@163.com|1490698236|0|mail163|00&99|fuj&1490232015&mail163#fuj&350100#10#0#0|157013&0||hufan2012muc@163.com; __utmc=94650624; __utmb=94650624.6.10.1491195035")
+names(header) <- c("Content-Type","Accept-Encoding","Referer","Cookie")
+#body中的参数
+body=list("csrf_token"="",
+          "params"="wR1XOWKPd+6GTp+9+I58JOkOtZu7ENR+MbMTCTjOyael7zrfyZ+rBgfe/fNbqYj6Nij4MoqUcUxaoYDEpXJ35llzPDcL4o0TGIi7s2bnNPTMsHMj3bnnKHVjuAEt11BBhSGugqOUckBg1saPHM3emvfqcd3XGdmOen1xbAe8SWF2eIxmAL0flxdGbeUMH1Go",
+          "encSecKey"="43c0d93de59260793304403afd42665acabf08ecb286bef2ecf57f6b888f94001d8cda9ffbd2459a65e4f8834be7117b5b85d18182ed81052d625af3caa002922b817642780449b7df28ff3ef7608b38982f05ec2510054e9c522e85e9aebcc3643226ba864640635ff30fd3c92401f4f0405d598648e73f6cc43e849cc55e51")
+#POST方法请求资源
+r <- POST(url,body=body,add_headers(header),encode="form",verbose())
+```
+
+
+<br><div style="color:#D81159"><big><b>案例二：调用网易云歌词的api接口进行抓取</b></big></div><br>
+
+
+这里需要抓包来获取 api，Windows 抓包一般使用`fiddler`软件（虽然被墙，但是我相信大家总是有办法找到它的）
+
+抓包方法不在本节课的内容里面，因此本节课就不对抓包方法作介绍，对网易云音乐 api 的抓包感兴趣的童鞋，可以参见[这个链接](http://moonlib.com/606.html)。
+
+```{r, eval=FALSE, warning=FALSE, include=TRUE}
+
+#scraping the list of songs and corresponding id
+library(httr)
+url <- "http://music.163.com/weapi/cloudsearch/get/web?csrf_token="
+cookie <- "_ntes_nnid=484b435c46e2eb6b563113db20cc895e,1487593736409; _ntes_nuid=484b435c46e2eb6b563113db20cc895e; mail_psc_fingerprint=97d26ebf733b32a06c99cbb055035d71; P_INFO=hufan2012muc@163.com|1490232015|0|mail163|00&99|fuj&1489910143&mail163#fuj&350200#10#0#0|157013&0||hufan2012muc@163.com; __utma=187553192.270240397.1487593742.1490919761.1491190846.3; __utmz=187553192.1490919761.2.2.utmcsr=open.163.com|utmccn=(referral)|utmcmd=referral|utmcct=/special/opencourse/machinelearning.html; __oc_uuid=6d413bf0-f768-11e6-a15d-8b596b174d70; JSESSIONID-WYYY=88y0WzBV0mnR%5Crt2SH%5Cy65xUCAAzfjitOEgpoJ4V2n%2BpMpCY7Q1TGCfFwWm%5CPuMx44e5%2BzDVM26Nhmj4BqtwHSQhc6aPEy%2BUl6V92coSiX90hkPHNExOMI5OvZnUDRAhAlz5JX2YuiFJ%5CmaSrFE%5Cs7qq0qHbZe%2FM2hQdj02%2FpFHzu6QM%3A1491222158317; _iuqxldmzr_=32; __utma=94650624.489148324.1491190730.1491215027.1491219139.5; __utmb=94650624.28.10.1491219139; __utmc=94650624; __utmz=94650624.1491215027.4.2.utmcsr=google|utmccn=(organic)|utmcmd=organic|utmctr=(not%20provided)"
+content.type <- "appliaction/x-www-form-urlencoded"
+headers <- c("_ntes_nnid=484b435c46e2eb6b563113db20cc895e,1487593736409; _ntes_nuid=484b435c46e2eb6b563113db20cc895e; mail_psc_fingerprint=97d26ebf733b32a06c99cbb055035d71; P_INFO=hufan2012muc@163.com|1490232015|0|mail163|00&99|fuj&1489910143&mail163#fuj&350200#10#0#0|157013&0||hufan2012muc@163.com; __utma=187553192.270240397.1487593742.1490919761.1491190846.3; __utmz=187553192.1490919761.2.2.utmcsr=open.163.com|utmccn=(referral)|utmcmd=referral|utmcct=/special/opencourse/machinelearning.html; __oc_uuid=6d413bf0-f768-11e6-a15d-8b596b174d70; JSESSIONID-WYYY=88y0WzBV0mnR%5Crt2SH%5Cy65xUCAAzfjitOEgpoJ4V2n%2BpMpCY7Q1TGCfFwWm%5CPuMx44e5%2BzDVM26Nhmj4BqtwHSQhc6aPEy%2BUl6V92coSiX90hkPHNExOMI5OvZnUDRAhAlz5JX2YuiFJ%5CmaSrFE%5Cs7qq0qHbZe%2FM2hQdj02%2FpFHzu6QM%3A1491222158317; _iuqxldmzr_=32; __utma=94650624.489148324.1491190730.1491215027.1491219139.5; __utmb=94650624.28.10.1491219139; __utmc=94650624; __utmz=94650624.1491215027.4.2.utmcsr=google|utmccn=(organic)|utmcmd=organic|utmctr=(not%20provided)",
+             "application/x-www-form-urlencoded",
+             "http://music.163.com/")
+names(headers) <- c("Cookie","Content-Type","Referer")
+formData <- c("params=JW9FGKdC3sCm6lxe%2FCXZSxlZM7blJmowgK3t9tCvYLYNEslk0onVnXIBZAZwBOh7MUoqAX2yI2Iznckac%2F9IyVxZlFlCu9XvsUjk2QPo4Kd6B116952btb1igESbjpnZclwDAfLIY1asBcdWeWWF1NnEzPk%2FftHcSyjIO%2Fmcp%2F61XiPz%2BWMh3b10Is%2BL2Q%2F6Wr1fe7GK9e3shN1ds93KR6%2BN1Uo5bX1Aqj%2FfrDGbnICnHDaS9otQL2hcrbYS7Ut0t6CYh%2FwrxI1pprcz6Ob6%2Ffl0ft34KxwXaDRykzXYil8%3D&encSecKey=d2d764f457b020e99c80ff18d31e4051eac14c56c0d4406fd84490ae1d6596e4497b8ccd792ee3936fb2d7f5bbff9e1a69b6660689798bd024af7afe6cf1fcaceed53490ce9a143abd45256897462856f95a1f9d9563e978b3bbb8b649759be38faac93ef6fdf8fbd488de0696a9781eeabeeef694c2ddf9917b4a69be4ad689",
+                "params=4jnh4TYUNNAuwKQ2sT3Y3S%2BE4%2Bsl79Xq0WVv3TEP66EQgYGSl2H5SDZTW6kRywTD2AVpjA5jTnzQAZblBNTFAxis8TjXBntGZA0w7th8h1N8R6oNUNeIJZyhjRvcF%2BnMdHTO8Ntj3Mxxfj93nF%2FKS7UlAMNdIQC%2BXyqa6FyoDmg%2BpXRq0J%2FrnF%2F81E%2BENQMnOMjr9dYwi2UObbeJehmJOVPGXce%2B7%2FRbQUQ%2FrRb8gIJneB0REa5LNxrAPDWQiUKwwpTsTfpBG7gIm0LK4LCMRlhvmoyiEqgD%2FPcVKRJ8zo0o7K9nPOiPbeQh4ervSI8H&encSecKey=7316edfe71581999fb0574abfa9533ab087aa06b141fd45f664cb309cbf23e4e8dc548b778933cebd4779208fb74060800d9f3fab4e356c1bb10e98ad921ae2354bccfbb1a5e49ee099000a15a5469180ee7e40f686eccd0360c00a753df05811348c569bf24836aa5781ae7f09ba5161b8691867298f49c2f0b111ad74c6a87",
+                "params=qlJbVqwnSZPFGaMIejQb5g5hshRilrkAehPOS4%2FjKRGtqo40nGZI1NNqqH%2BMvNYbTxa%2FVXed%2ByjmCT98giDmMKSvJRZfvHpEbBnTBzJeefVULgqm%2BI3i3PNE2Av4CXoiwi7OLt23MbJhtuhzXSH%2BqvlMRXXcHeDJ4bgzoUrWaDqX%2B0nvBG29gtOrpz70HQCZmVnIMqQiIuCVI9wk48pWaE5ulli%2BRJBA0OC2djkjUMcjLhbiqoCBC46BnxLciUlOfb37Fo0%2BG0TxYVHzBd3dX7S2Ghd69SRGi%2FTFDrgswq4zz9ExlGT5Cy50BGUWtCxt&encSecKey=1eb0266d0a985c6f681fb8666148a3b5ab7e7891ad170a43a3d69926eda1d4e8ebf14f2e0bcc76d05af453a6619a7ffb27d2ceec80696ccae2695d5b169c1577798d3f7335b0689f017c0e32daf3ec7a7227fbd2a094485c6fe2385e3eaf9376a18e0b20814481199eba7fd75f7df5153ef6341627043dbaf1a5f2871327d5b6")
+
+r <- lapply(formData,
+            FUN=function(x) POST(url,add_headers(headers),body=x,encode="form"))
+name.id <- lapply(r,function(xx){item <- content(xx);
+                        data.frame(lapply(item$result$songs,function(x) x[c('name','id')]))})
+name.id <- t(data.frame(name.id))
+dat <- as.data.frame(matrix(name.id,ncol=2,byrow=T),stringsAsFactors = F)
+colnames(dat) <- c("name","id")
+dat <- dat[!duplicated(dat[1]),] #duplicate返回逻辑值
+lyric_url <- paste("http://music.163.com/api/song/media?id=",dat$id,sep="")
+#head(lyric_url)
+
+#爬取歌词
+library(rvest)
+lyric <- lyric_url %>% lapply(function(x){x %>% read_html() %>% html_text() %>% str_replace_all(pattern="([:punct:]+)|([a-zA-Z\\d~]+)",replacement=" ") %>% str_replace_all(pattern=" +",replacement=" ") %>% str_trim()})
+
+```
+
+<br>
+<div style="color:#F38181;"><h1><a name="c2">2. 中文分词</a></h1></div>
+
+
+
+
+<div style="color:#F38181;"><h2><a name="c2.1">2.1 jiebaR 库简介</a></h2></div>
+
+
+jiebaR 是一个处理中文分词的库，在中文分词准确度方面有着良好的表现。
+
+jiebaR库非常容易上手，我们一共才需要掌握11个函数，而且这些函数大多用法相似，非常容易记忆，来看看到底是哪些：
+
+1. worker()
+
+2. segment()
+
+3. tagging()
+
+4. keywords()
+
+5. simhash()
+
+6. distance()
+
+7. vector_tag()
+
+8. vector_keywords()
+
+9. vector_simhash()
+
+10. vector_distance()
+
+11. new_user_word()
+
+掌握好这些函数，你就能游刃有余地处理中文分词了。
+
+其中**最常用**的函数如下：
+
+- <b>worker()</b>
+
+`worker()` 函数依据不同的模型参数，可以产生 7 种分词器，分别是：
+
+|模型参数type|含义|模型参数type|含义|
+|----|---------------------------------------------|----|-------------------------------------|
+|`mp`|最大概率模型，<br>依据给定词典的词频进行分词，<br>词频越大，越容易被分割出来，<br>最简单的分词模型，<br>用得比较少|`hmm`|隐马尔科夫模型，<br>将前后相邻的两个字组成一个词，计算其出现的频率，<br>当频率超过一个阈值时，便将其作为一个词进行索引，<br>能有效提取未在词典中出现的词|
+|`mix`|混合模型，<br>因为是结合 mp、hmm 模型进行分词，所以被称为混合模型<br>它是默认分词器|`query`|索引模型，<br>用得比较少|
+|`tag`|分词并标记词性，<br>若有标记词性的需求，**可以**指定模型参数为`tag`，<br>也可以是指定为`mp`，`hmm`，`mix`，然后把分词器传入`tagging()`函数|`keywords`|提取关键词，<br>基于给定的[TF-IDF](http://www.ruanyifeng.com/blog/2013/03/tf-idf.html)语料库进行提取，<br>若有提取关键词的需求，**必须**指定模型参数为`keywords`|
+|`simhash`|使用这个模型，将返回一个list，<br>这个list包含simhash value，<br>以及基于`keywords`模型分割出的关键词向量，<br>而simhash value可以被进一步用来计算[海明距离](http://www.lanceyan.com/tech/arch/simhash_hamming_distance_similarity.html)（文本相似度）,<br>jiebaR中用`distance()`函数来计算海明距离，但它其实就是根据simhash value得到的|||
+
+<br>
+- `mix`模型下分词器的两种等价写法：
+```{r}
+words <- "大家好，我是Vanly！"
+
+# 分词器 ->  [ ]
+mixseg <- worker()
+mixseg[words]
+
+# 分词器 -> segment(句子,分词器)
+segment(words,mixseg)
+```
+
+
+<br>
+<div style="color:#F38181;"><h2><a name="c2.2">2.2 添加停止词词库</a></h2></div>
+<br>
+
+
+`worker()`中还有一个参数值得我们关注——`stop_word`这个参数是用来在分词时移除<a href="#tzc">停止词</a>的。
+
+`jiebaR`的文档中已经写明:`stop_word`的参数值不能指定为系统停止词路径`STOPPATH`。但我们又需要移除停止词，这时候该怎么办？找到系统停止词词典文件，然后复制到R当前工作目录下，最后指定`stop_word="stop.UTF8"`就可以了。
+```{r}
+STOPPATH #查看系统路径
+
+mix1 <- worker() #不使用停止词库
+mix1[c('我是这次R爬虫的主讲人','谢谢大家来听课！')]
+
+mix2 <- worker(stop_word="stop.UTF8") #使用停止词库
+mix2[c('我是这次R爬虫的主讲人','谢谢大家来听课！')]
+```
+
+
+<br>
+<div style="color:#F38181;"><h1><a name="c3">3. 文本挖掘入门</a></h1></div>
+<br>
+
+DTM，是Document-Term Matrix的缩写，也就是我们常说的文档-词矩阵。
+
+文档-词矩阵，是指以文档文件为行，以词为列，用词语在某个文档中出现的频数来填充矩阵。
+
+为什么要构造这样的矩阵？很显然，如果你手里只有一些完全看不出什么关系的文档，不把它们转化为能够使用数学工具进行分析的数值，那么无疑这是堆没有用的东西。然而，我们得到 DTM 后，我们也就得到了文档的词向量。正是因为有了这些词向量，我们才能使用各种算法量化地分析文本，比如通过聚类自动划分文档类型、设计出推荐系统、分析用户情绪等。
+
+当然，你也可以构造成 TDM（Term-Document Matrix），也就是词-文档矩阵。但这两者没有什么实质的区别，TDM不过是DTM的转置而已。
+
+
+<div style="color:#F38181;"><h2><a name="c3.1">3.1 构建语料库</a></h2></div>
+<br>
+
+Q：什么是语料库？
+
+A：语料库就相当于多个文档的一个集合。
+
+读入所有文档，并构造成语料库的形式，这只是我们进行文本挖掘的第一步。根据文档集的不同形式，我们又需要用不同的函数完成语料库的构建。下面介绍三种构造方式：
+
+
+
+<div style="color:#F38181;"><h3><a name="c3.1.1">3.1.1 构造单个 csv 文件的语料库</a></h3></div>
+<br>
+
+
+对于 csv 文件的读取，我们有以下三个步骤：
+
+1. 先用`read.csv()`或者`read.table()`读取本地的 csv 文件
+
+2. 使用tm包中的`DataframeSource()`加载该 csv，并保存为变量`Source`，待进一步将其转化为语料库
+
+3. 使用tm包中的`Corpus()`函数转化第二步中的`Source`，成功构建语料库！
+
+```{r, warning=FALSE}
+csv <- read.table("./case/毒鸡汤.csv",header=T,sep=",",stringsAsFactors=F)
+str(csv)
+d.corpus <- Corpus(DataframeSource(csv),readerControl=list(language=NA))
+
+#探索corpus的结构
+class(d.corpus) ## "VCorpus" "Corpus"
+typeof(d.corpus) #实际上d.corpus的内部结构是list
+
+#查看corpus的内容
+inspect(d.corpus[[1]])
+```
+**Note**：因为我们读入的是中文文档，并且 tm 包可选定的语言中不包括中文，所以这里我们把语言设为`NA`
+
+<br>
+<div style="color:#F38181;"><h3><a name="c3.1.2">3.1.2 构造单个非 csv 文件的语料库</a></h3></div>
+
+
+
+构建非 csv 文件的语料库，其步骤与读取单个 csv 文件的步骤差不多。只是在这里，我们用的是`readLines`来读取本地文本文件：
+
+1. 先用`readLines()`读取本地文本文件，尽量指定编码防止读取出错，若有空值存在，事先删除空值
+
+   **Note**：建议使用 [Notepad++](https://notepad-plus-plus.org/) 打开文件，查看文件编码。
+
+2. 使用tm包中的`VectorSource()`来加载已读入的文件，并保存为变量`Source`待下一步转化为语料库
+
+3. 使用tm包中的`Corpus()`函数对第二步中的`Source`进行转化。
+```{r, warning=FALSE, include=TRUE}
+text <- readLines("./case/lyric.txt",encoding="UTF-8")
+#text <- lyric
+head(text,2)
+text <- text[text!=""] #删除空值
+head(text,2)
+
+d.corpus <- Corpus(VectorSource(text),readerControl = list(language=NA))
+head(as.character(d.corpus[[1]])) 
+#d.corpus <- Corpus(VectorSource(text),readerControl = list(language="english"))
+```
+
+<br>
+<div style="color:#F38181;"><h3><a name="c3.1.3">3.1.3 构造多个文档的语料库</a></h3></div>
+
+
+当多个文档放在一个同目录下，即放在同一个文件夹中时，我们使用的加载函数为`DirSource()`.
+
+假设我现在有一个文件夹，名称为“倚天屠龙记全本”。而这个文件夹里只存放了倚天屠龙记小说的三部分，现在我们来用这三个文档构造语料库：
+
+1. 找到包含这三个文档的文件夹名称，并搞清楚**文本文件**的编码（注意，这里的三个文档格式及编码应该一致！）
+
+2. 利用tm包的`DirSource()`函数来加载这些文档至R环境中，并需要指定文档编码！
+
+3. 使用tm'包的`Corpus()`函数来完成目录语料库的构建
+```{r}
+#source <- DirSource("./case/倚天屠龙记全本",encoding="GB2312")
+#d.corpus <- Corpus(source,readerControl=list(language=NA))
+```
+到此，文本语料库已经构建完成！
+
+
+<br>
+<div style="color:#F38181;"><h2><a name="c3.2">3.2 清洗数据</a></h2></div>
+
+
+
+语料库虽然已经构建完成，但我们还需要对文本语料库进行数据清洗。在这里，我们使用tm包中的`tm_map()`函数便可以达到目标，你可以这样理解`tm_map()`：它就相当于base包的`lapply()`，只不过它返回的不是`list`类型，而依然是语料库形式。
+
+`tm_map(x,FUN,...)`中的`x`是你待处理的语料库，`FUN`是对语料库进行处理的函数，`...`是`FUN`中的参数。
+
+**中文**语料库的数据清洗步骤包括：
+
+1. 移除标点符号
+```{r}
+d.corpus <- tm_map(d.corpus,removePunctuation)
+```
+
+2. 移除数字
+```{r}
+d.corpus <- tm_map(d.corpus,removeNumbers)
+```
+
+3. 移除英文字母
+```{r}
+d.corpus <- tm_map(d.corpus,str_replace_all,pattern="[a-zA-Z]+",replacement="")
+```
+
+4. 移除多余的空格
+```{r}
+d.corpus <- tm_map(d.corpus,stripWhitespace)
+```
+
+以上是中文语料库的一般清洗步骤，对于**英文**语料库，我们通常还要加入：
+
+- 将语料库中的英语单词全都转换为小写单词（或者大写）
+```{r}
+#d.corpus_en <- tm_map(d.corpus,tolower) 
+```
+
+
+- 找到词根，并只保留词根，删除同一词根的英语单词
+
+这里我们需要使用到tm包里的`stemDocument()`函数，但这个函数对`Snowballc`包有依赖，所以我们在使用前必须保证已经加载了`Snowballc`这个包。
+```{r}
+#install.packages("Snowballc")
+#library(Snowballc)
+#d.corpus_en <- tm_map(d.corpus_en,stemDocument)
+```
+Note：
+
+    + `stemDocument()`可以提取单词的词根 
+    + `stemCompletion()`可以补全词根
+
+- 删除停止词
+
+<a name="tzc">停止词</a>一般是指我们日常说得特别频繁的词，可能在某些场景几乎必不可少，但与其他词相比，它没有多大实际意义，对我们的分析并不会有什么帮助，比如“I”,"He","She",“a”，"is","that","of"，“in"等。
+
+```{r}
+#d.corpus_en <- tm_map(d.corpus_en,removeWords,stopwords("en"))
+```
+
+
+当然，中文中也有停止词，比如”我们“，“然而”，“吗”，“那个”，“在”等。但是我们先不在这部分对中文词的停止词作删除操作，我们将在用jiebaR对中文语料库分词的那部分，通过加载停用词词典，直接移除中文停止词。
+
+<br>
+<div style="color:#F38181;"><h2><a name="c3.3">3.3 使用 jiebaR 对语料库分词</a></h2></div>
+
+
+- Question：
+
+为什么先对中文进行分词，再使用tm包构造DTM？
+
+- Answer：
+
+利用缺省的 reader 读入文档时，tm 是基于空格进行词分割的，所以tm对英文单词有很好的分割效果。
+
+然而，如果文档为中文，tm 还是会以空格作为单词的分割符。因此基于tm分割词语的原理，这种分割对中文是不适用的。
+
+- 解决办法：
+
+为了能够处理中文，我们可以将 jiebaR 的分词器传入`tm_map()`函数中，对中文语料库进行分词。
+```{r, include=TRUE}
+mix <- worker(stop_word = "./case/stop.UTF8") #读入停止词词典
+mix$bylines=TRUE #设置为分行输出
+#如果不进行分行输出处理，那么分词结果将全部转变为向量，最终失去了词向量的对应文档标识
+#inspect(d.corpus[1:3])
+
+d.corpus2 <- tm_map(d.corpus,segment,mix)
+class(d.corpus2)
+#inspect(d.corpus2[1:3])
+```
+好了，我们已经对语料库分好词，我们可以进行下一步操作了！
+
+
+<br>
+<div style="color:#F38181;"><h2><a name="c3.4">3.4 构造 DTM 或者 TDM</a></h2></div>
+
+
+在经过以上步骤后，我们可以开始构造文档-词矩阵（词-文档矩阵）了，通过使用tm包里的`DocumentTermMatrix()`（TermDocumentMatrix()）函数，我们可以轻松得到文档-词矩阵（词-文档矩阵）：
+```{r}
+dtm <- DocumentTermMatrix(d.corpus2)
+dtm2 <- DocumentTermMatrix(d.corpus2,control=list(weighting=weightTfIdf))
+#tdm <- TermDocumentMatrix(d.corpus2)
+#inspect(dtm[1:3,1:10])
+#View(inspect(dtm2[1:3,1:10]))
+```
+一条语句就构造完成DTM了！通过使用`inspect()`函数，我们还可以查看dtm矩阵的内容。上面的`inspect`语句查看的就是文档-词矩阵的1至3行、1至10列的子矩阵。
+
+Note：`inspect()`会随机挑选显示项，并不会按文档索引顺序来呈现。
+
+`DocumentTermMatrix()`函数的`control`参数中有一个设置`weighting`，表明以何种加权方式来填充DTM的矩阵值。默认设置为`control=list(weighting=weightTf)`，一共有四种加权方式：
+
+   1. weightTf
+
+   2. weightTfIdf
+
+   3. weightBin
+
+   4. WeightSMART
+
+<br>
+<div style="color:#F38181;"><h3><a name="c3.5">3.5 词云制作 </a></h3></div>
+
+
+
+词云我们使用 wordcloud2 这个包。
+
+
+
+<div style="color:#F38181;"><h3><a name="c3.5.1">3.5.1 按词频对词语进行排序</a></h3></div>
+
+
+
+我们需要先计算出词频，再去构建 word-freq 数据框，最后才能实现词云
+```{r}
+m <- as.matrix(dtm)
+freq <- colSums(m)
+freq <- sort(freq,decreasing = TRUE) #对词频按降序排列
+```
+
+
+
+<div style="color:#F38181;"><h3><a name="c3.5.2">3.5.2 绘制词云</a></h3></div>
+
+
+```{r}
+str(freq)
+```
+
+显然，`freq`这个向量是一个命名向量，保留了对应的词语作为名称，这正是我们想要的，因为我们乐意利用命名向量轻易构造出 word-freq 矩阵：
+```{r}
+words <- names(freq)
+
+word_freq <- data.frame(words=words,freq=freq) #构建word-freq数据框
+
+wordcloud2(word_freq,size=0.8,color="random-light",backgroundColor="grey")
+#letterCloud(word_freq,word="薛之谦",wordSize=2,color="random-light")
+
+#figPath <- "./case/薛之谦.jpg"
+#wordcloud2(word_freq,figPath=figPath,size=1,color="random-light")
+```
+
+
+- [R包之tm：文本挖掘包](http://www.bagualu.net/wordpress/archives/6112)
