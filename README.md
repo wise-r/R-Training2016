@@ -29,3 +29,6 @@ R基础学习-控制流、函数、apply族
 
 ###class10-Machine Learning
 机器学习算法入门
+
+###class11-Rcpp：Seamless R and C++ Integation with Rcpp
+Rcpp - R 与 C++ 的无缝衔接
